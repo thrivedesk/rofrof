@@ -4,7 +4,7 @@ override LDFLAGS += uWebSockets/uSockets/*.o -lz -lssl -lcrypto -luv  -lasan
 build:
 	$(MAKE) -C uWebSockets/uSockets; \
 	mkdir -p build; \
-	$(CXX) $(CXXFLAGS) main.cpp -o build/rof_rof $(LDFLAGS);
+	$(CXX) $(CXXFLAGS) main.cpp -o build/rofrof $(LDFLAGS);
 
 default:
 	$(MAKE) build;

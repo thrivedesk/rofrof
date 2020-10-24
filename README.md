@@ -1,4 +1,4 @@
-# ROF ROF
+# ROFROF
 
 
 ### Development
@@ -24,5 +24,5 @@ make
 
 ### Run
 ```
-./build/rof_rof
+./build/rofrof
 ```
