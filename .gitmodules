@@ -1,3 +1,7 @@
+# If no git pull added then clone the git repo. 
+# Then update the path with "git submodule update --init" or "git submodule update --init --recursive"
+# Then change the submodule url to git@github.com:uNetworking/uWebSockets.git
+
 [submodule "uWebSockets"]
 	path = uWebSockets
 	url = git@github.com:uNetworking/uWebSockets.git
