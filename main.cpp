@@ -1,7 +1,6 @@
 #include "App.h"
 #include <thread>
 #include <algorithm>
-#include <vector>
 
 int main() {
     /* Overly simple hello world app, using multiple threads */
