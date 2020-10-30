@@ -1,0 +1,8 @@
+//
+// Created by rocky on 10/31/20.
+//
+
+#ifndef ROFROF_PRESENCECHANNEL_H
+#define ROFROF_PRESENCECHANNEL_H
+
+#endif //ROFROF_PRESENCECHANNEL_H

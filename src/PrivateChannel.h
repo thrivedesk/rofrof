@@ -1,0 +1,8 @@
+//
+// Created by rocky on 10/31/20.
+//
+
+#ifndef ROFROF_PRIVATECHANNEL_H
+#define ROFROF_PRIVATECHANNEL_H
+
+#endif //ROFROF_PRIVATECHANNEL_H
