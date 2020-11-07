@@ -5,12 +5,11 @@
 #ifndef ROFROF_IMESSAGECALLABLE_H
 #define ROFROF_IMESSAGECALLABLE_H
 
-#include "WebSocket.h"
-
 namespace RofRof {
+    template<bool SSL, bool isServer>
     struct IMessageCallable {
     public:
-        virtual void onMessage(uWS::WebSocket<true, true> *ws) = 0;
+        virtual void onMessage(uWS::WebSocket<SSL, isServer> *ws, std::string_view message, uWS::OpCode opCode) = 0;
     };
 }
 

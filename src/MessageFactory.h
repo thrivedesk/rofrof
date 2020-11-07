@@ -1,8 +1,0 @@
-//
-// Created by rocky on 10/31/20.
-//
-
-#ifndef ROFROF_MESSAGEFACTORY_H
-#define ROFROF_MESSAGEFACTORY_H
-
-#endif //ROFROF_MESSAGEFACTORY_H

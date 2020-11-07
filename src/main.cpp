@@ -1,61 +1,53 @@
+#include <thread>
+#include <iostream>
 #include "App.h"
 #include "PerUserData.h"
-#include <thread>
-#include <algorithm>
-#include "Channel.h"
 #include "WebSocketHandler.h"
-#include "ClientMessage.h"
 
 int main() {
-    std::vector<std::thread *> threads(std::thread::hardware_concurrency());
+    auto *websocketHandler = new RofRof::WebSocketHandler<false, true>();
 
-    std::transform(threads.begin(), threads.end(), threads.begin(), [](std::thread *t) {
-        return new std::thread([]() {
+    uWS::App()
+            .get("/*", [](auto *res, auto *req) {
+                res->end("Hello world!");
+            })
+            .ws<RofRof::PerUserData>("/*", {
+                    /* Settings */
+                    .compression = uWS::SHARED_COMPRESSOR,
+                    .maxPayloadLength = 16 * 1024,
+                    .idleTimeout = 35,
+                    .maxBackpressure = 1 * 1024 * 1024,
+                    /* Handlers */
+                    .upgrade = [&](auto *res, auto *req, auto *context) {
+                        websocketHandler->onUpgrade(res, req, context);
+                    },
+                    .open = [&](auto *ws) {
+                        websocketHandler->onOpen(ws);
+                    },
+                    .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
+                        websocketHandler->onMessage(ws, message, opCode);
+                    },
+                    .drain = [&](auto *ws) {
+                        /* Check getBufferedAmount here */
+                        websocketHandler->onDrain(ws);
+                    },
+                    .ping = [](auto *ws) {
 
-            uWS::App()
-                    .get("/*", [](auto *res, auto *req) {
-                        res->end("Hello world!");
-                    })
-                    .ws<RofRof::PerUserData>("/*", {
-                            /* Settings */
-                            .compression = uWS::SHARED_COMPRESSOR,
-                            .maxPayloadLength = 16 * 1024,
-                            .idleTimeout = 10,
-                            .maxBackpressure = 1 * 1024 * 1024,
-                            /* Handlers */
-                            .open = [](auto *ws) {
+                    },
+                    .pong = [](auto *ws) {
 
-                            },
-                            .message = [](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                                ws->send(message, opCode);
-                            },
-                            .drain = [](auto *ws) {
-                                /* Check getBufferedAmount here */
-                            },
-                            .ping = [](auto *ws) {
+                    },
+                    .close = [&](auto *ws, int code, std::string_view message) {
+                        websocketHandler->onClose(ws, code, message);
+                    }
+            })
+            .listen(7000, [](auto *token) {
+                if (token) {
+                    std::cout << "Thread " << std::this_thread::get_id() << " listening on port " << 7000 << std::endl;
+                } else {
+                    std::cout << "Thread " << std::this_thread::get_id() << " failed to listen on port 7000"
+                              << std::endl;
+                }
+            }).run();
 
-                            },
-                            .pong = [](auto *ws) {
-
-                            },
-                            .close = [](auto *ws, int code, std::string_view message) {
-
-                            }
-                    })
-                    .listen(3000, [](auto *token) {
-                        if (token) {
-                            std::cout << "Thread " << std::this_thread::get_id() << " listening on port " << 3000
-                                      << std::endl;
-                        } else {
-                            std::cout << "Thread " << std::this_thread::get_id() << " failed to listen on port 3000"
-                                      << std::endl;
-                        }
-                    }).run();
-
-        });
-    });
-
-    std::for_each(threads.begin(), threads.end(), [](std::thread *t) {
-        t->join();
-    });
 }
