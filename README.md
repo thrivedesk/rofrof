@@ -8,6 +8,9 @@ Standard: C++2a
 ### Dependencies
 * uNetWorking/uWebSockets#v18.15.0
 * jsoncpp
+* libabsl
+    * http://archive.ubuntu.com/ubuntu/pool/universe/a/abseil/libabsl20200225_0~20200225.2-3_amd64.deb
+    * http://archive.ubuntu.com/ubuntu/pool/universe/a/abseil/libabsl-dev_0~20200225.2-3_amd64.deb
 
 ### Prepare
 

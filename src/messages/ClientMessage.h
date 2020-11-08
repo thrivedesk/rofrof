@@ -18,7 +18,8 @@ namespace RofRof {
         uWS::WebSocket<SSL, isServer> *ws;
         RofRof::IChannelManager<SSL, isServer> *channelManager;
 
-        ClientMessage(Payload &payload, uWS::WebSocket<SSL, isServer> *ws,IChannelManager <SSL, isServer> *channelManager) {
+        ClientMessage(Payload &payload, uWS::WebSocket<SSL, isServer> *ws,
+                      IChannelManager <SSL, isServer> *channelManager) {
             this->payload = payload;
             this->ws = ws;
             this->channelManager = channelManager;
@@ -32,14 +33,29 @@ namespace RofRof {
 
 
         void respond() override {
-            if (payload.event.rfind("client-", 0) == 0) {
+            if (payload.event.rfind("client-", 0) != 0) {
                 return;
             }
-            std::cout << " Client Message " << std::endl;
-//            PerUserData userData = this->ws->getUserData();
 
-//            if(this->ws->getUserData()) // check if client message enabled
-//            IChannel channel = this->channelManager->find(userData->app->)
+            auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
+            std::cout << " Client Message to channel " << payload.channel << std::endl;
+
+            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(data->appId, payload.channel);
+
+            if (channel == nullptr) {
+                std::cout << "Channel does not exist" << std::endl;
+                return;
+            }
+
+            Json::Value root;
+            root["event"] = payload.event;
+            root["channel"] = payload.channel;
+            root["data"] = payload.message;
+
+            channel->broadcastToOthers(ws, root);
+
+            std::cout << "Message sent, connection count: " << channelManager->getConnectionCount(data->appId)
+                      << std::endl;
         }
     };
 }

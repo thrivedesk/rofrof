@@ -1,15 +1,33 @@
 #include <thread>
 #include <iostream>
 #include "App.h"
+#include "HttpParser.h"
+#include "HttpResponse.h"
 #include "PerUserData.h"
 #include "WebSocketHandler.h"
+#include "RofRofController.h"
 
 int main() {
-    auto *websocketHandler = new RofRof::WebSocketHandler<false, true>();
+    const bool SSL = false;
+    const bool isServer = true;
+    auto *websocketHandler = new RofRof::WebSocketHandler<SSL, isServer>();
+    auto *controller = new RofRof::RofRofController<SSL, isServer>(websocketHandler->channelManager);
 
     uWS::App()
-            .get("/*", [](auto *res, auto *req) {
-                res->end("Hello world!");
+            .get("/*", [](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                res->end("The fastest WebSocket server in the world!!!");
+            })
+            .post("/apps/:appId/events", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->triggerEvent(res, req);
+            })
+            .get("/apps/:appId/channels", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->fetchChannels(res, req);
+            })
+            .get("/apps/:appId/channels/:channelName", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->fetchChannel(res, req);
+            })
+            .get("/apps/:appId/channels/:channelName/users", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->fetchUsers(res, req);
             })
             .ws<RofRof::PerUserData>("/*", {
                     /* Settings */

@@ -153,12 +153,12 @@ namespace RofRof {
         }
 
         void onError(uWS::WebSocket<SSL, isServer> *ws, std::exception exception) override {
-
+            std::cout << "Error occurred" << std::endl;
         }
 
     protected:
         WebSocketHandler *verifyAppKey(uWS::WebSocket<SSL, isServer> *ws) {
-            std::cout << ws->getUserData()->event << std::endl;
+            std::cout << ws->getUserData() << std::endl;
             return this;
         }
 

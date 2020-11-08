@@ -27,10 +27,11 @@ namespace RofRof {
         std::string channelName;
 
         bool hasConnections() {
+            std::cout << "Calling hasConnections() in " << this->channelName << std::endl;
             return !subscribedConnections.empty();
         }
 
-        std::map<std::string, uWS::WebSocket<SSL, isServer>> getSubscribedConnections() {
+        std::map<std::string, uWS::WebSocket<SSL, isServer> *> getSubscribedConnections() {
             return subscribedConnections;
         }
 
@@ -49,7 +50,7 @@ namespace RofRof {
             }
         }
 
-        void broadcastToOthers(uWS::WebSocket<SSL, isServer> *ws, Json::Value root) {
+        void broadcastToOthers(uWS::WebSocket<SSL, isServer> *ws, const Json::Value &root) {
             Json::StreamWriterBuilder builder;
             const std::string response = Json::writeString(builder, root);
 
@@ -58,7 +59,7 @@ namespace RofRof {
             this->broadcastToEveryoneExcept(response, data->socketId);
         }
 
-        void broadcastToEveryoneExcept(std::string response, std::string socketId) {
+        void broadcastToEveryoneExcept(std::string response, const std::string &socketId) {
             for (auto it = this->subscribedConnections.begin(); it != this->subscribedConnections.end(); it++) {
                 if (it->first != socketId) {
                     it->second->send(response, uWS::OpCode::TEXT);

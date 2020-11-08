@@ -11,12 +11,16 @@ namespace RofRof {
     struct Payload {
     public:
         std::string event;
+        std::string channel;
         Json::Value message;
 
         Payload() = default;
 
         explicit Payload(Json::Value message) {
             this->event = message["event"].asString();
+            if(message.isMember("channel")) {
+                this->channel = message["channel"].asString();
+            }
             this->message = message["data"];
         }
     };
