@@ -44,6 +44,17 @@ namespace RofRof {
 
         virtual void unsubscribe(uWS::WebSocket<SSL, isServer> *ws) = 0;
 
+        virtual std::map<std::string, Json::Value> getUsers() {
+            // for presence channel
+            std::map<std::string, Json::Value> users;
+            return users;
+        }
+
+        virtual unsigned int getUsersCount() {
+            // for presence channel
+            return 0;
+        }
+
         void broadcast(std::string response) {
             for (auto it = this->subscribedConnections.begin(); it != this->subscribedConnections.end(); it++) {
                 it->second->send(response, uWS::OpCode::TEXT);
@@ -65,6 +76,16 @@ namespace RofRof {
                     it->second->send(response, uWS::OpCode::TEXT);
                 }
             }
+        }
+
+        Json::Value toArray() {
+            auto count = (unsigned int) subscribedConnections.size();
+
+            Json::Value root;
+            root["occupied"] = count > 0;
+            root["subscription_count"] = count;
+
+            return root;
         }
     };
 }

@@ -91,7 +91,9 @@ namespace RofRof {
         std::map<std::string, RofRof::IChannel<SSL, isServer> *> getChannels(std::string appId) override {
             auto appsIt = this->apps.find(appId);
             if (appsIt == this->apps.end()) {
-                // TODO: throw an error maybe
+                // throw error later
+                std::map<std::string, RofRof::IChannel<SSL, isServer> *> empty;
+                return empty;
             }
 
             return appsIt->second;

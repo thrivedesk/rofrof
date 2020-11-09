@@ -54,25 +54,10 @@ namespace RofRof {
              * PerSocketData is valid from .open to .close event, accessed with ws->getUserData().
              * HttpRequest (req) is ONLY valid in this very callback, so any data you will need later
              * has to be COPIED into PerSocketData here. */
-            std::string appId;
-            bool nextIsAppId = false;
-            std::stringstream s_stream((std::string) req->getUrl());
-            while (s_stream.good()) {
-                std::string substr;
-                std::getline(s_stream, substr, '/');
-                if (!std::empty(substr)) {
-                    if (substr == "app") {
-                        nextIsAppId = true;
-                        continue;
-                    }
-                    if (nextIsAppId) {
-                        appId = substr;
-                        break;
-                    }
-                }
-            }
+            std::string appId = (std::string) req->getParameter(0);
 
             if (std::empty(appId)) {
+                std::cout << "No app found" << std::endl;
                 res->end("No app found");
                 return;
             }
@@ -138,7 +123,7 @@ namespace RofRof {
             const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
             if (!reader->parse(message.cbegin(), message.cend(), &msg, &err)) {
                 std::cout << "error" << std::endl;
-                exit(100);
+                return;
             }
 
             RofRof::Payload payload(msg);

@@ -68,8 +68,12 @@ namespace RofRof {
             this->channelName = channelName;
         }
 
-        std::map<std::string, uWS::WebSocket<SSL, isServer> *> getUsers() {
-            return this->users;
+        std::map<std::string, Json::Value> getUsers() override {
+            return users;
+        }
+
+        unsigned int getUsersCount() override {
+            return (unsigned int) users.size();
         }
 
         void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload &payload) {

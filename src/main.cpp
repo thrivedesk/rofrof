@@ -29,7 +29,7 @@ int main() {
             .get("/apps/:appId/channels/:channelName/users", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
                 controller->fetchUsers(res, req);
             })
-            .ws<RofRof::PerUserData>("/*", {
+            .ws<RofRof::PerUserData>("/app/:appId", {
                     /* Settings */
                     .compression = uWS::SHARED_COMPRESSOR,
                     .maxPayloadLength = 16 * 1024,
