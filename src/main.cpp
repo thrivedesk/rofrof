@@ -11,7 +11,7 @@ int main() {
     const bool SSL = false;
     const bool isServer = true;
     auto *websocketHandler = new RofRof::WebSocketHandler<SSL, isServer>();
-    auto *controller = new RofRof::RofRofController<SSL, isServer>(websocketHandler->channelManager);
+    auto *controller = new RofRof::RofRofController<SSL, isServer>(websocketHandler);
 
     uWS::App()
             .get("/*", [](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {

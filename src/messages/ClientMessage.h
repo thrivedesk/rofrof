@@ -40,7 +40,7 @@ namespace RofRof {
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
             std::cout << " Client Message to channel " << payload.channel << std::endl;
 
-            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(data->appId, payload.channel);
+            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(data->app->id, payload.channel);
 
             if (channel == nullptr) {
                 std::cout << "Channel does not exist" << std::endl;
@@ -54,8 +54,7 @@ namespace RofRof {
 
             channel->broadcastToOthers(ws, root);
 
-            std::cout << "Message sent, connection count: " << channelManager->getConnectionCount(data->appId)
-                      << std::endl;
+            std::cout << "Message sent, connection count: " << channelManager->getConnectionCount(data->app->id)<< std::endl;
         }
     };
 }

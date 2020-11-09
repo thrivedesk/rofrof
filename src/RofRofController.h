@@ -6,12 +6,13 @@
 #define ROFROF_ROFROFCONTROLLER_H
 
 #include <iostream>
-#include "channels/IChannelManager.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct RofRofController {
-    private:
+    protected:
+        RofRof::WebSocketHandler<SSL, isServer> *webSocketHandler;
+
         void respond(uWS::HttpResponse<SSL> *res, Json::Value &payload) {
             Json::StreamWriterBuilder builder;
 
@@ -20,28 +21,49 @@ namespace RofRof {
             res->end(response);
         }
 
-    protected:
-        RofRof::IChannelManager<SSL, isServer> *channelManager;
+        App *ensureValidAppId(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+            std::string appId = std::string(req->getParameter(0));
+            if (!std::empty(appId)) {
+                App *app = webSocketHandler->appManager->findById(appId);
+                if (app != nullptr) {
+                    return app;
+                }
+            }
+
+            res->writeStatus("401 Unauthorized");
+            res->end("Unknown app id " + appId + " provided.");
+            return nullptr;
+        }
+
+        bool ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
+            // TODO: add signature validation
+            return true;
+        }
+
     public:
-        explicit RofRofController(RofRof::IChannelManager<SSL, isServer> *channelManager) {
-            this->channelManager = channelManager;
+        explicit RofRofController(RofRof::WebSocketHandler<SSL, isServer> *webSocketHandler) {
+            this->webSocketHandler = webSocketHandler;
         }
 
         void triggerEvent(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-            std::string appId = (std::string) req->getParameter(0);
-            std::string channelsJson = (std::string) req->getQuery("channels");
-            std::cout << "App ID: " << appId << std::endl;
+            App *app = this->ensureValidAppId(res, req);
+            if (app == nullptr) {
+                return;
+            }
 
             /* Allocate automatic, stack, variable as usual */
             std::string buffer;
             /* Move it to storage of lambda */
-            res->onData([res, this, appId = std::move(appId), buffer = std::move(buffer)](std::string_view data,
-                                                                                          bool last) mutable {
+            res->onData([res, req, this, app, buffer = std::move(buffer)](std::string_view data, bool last) mutable {
                 /* Mutate the captured data */
                 buffer.append(data.data(), data.length());
 
                 if (last) {
                     /* When this socket dies (times out) it will RAII release everything */
+
+                    if (!ensureValidAppSignature(req, app, buffer)) {
+                        return;
+                    }
 
                     Json::Value payload;
                     JSONCPP_STRING err;
@@ -72,7 +94,7 @@ namespace RofRof {
 
                     for (auto &channel : channels) {
                         std::string channelName = channel.asString();
-                        RofRof::IChannel<SSL, isServer> *channelPtr = this->channelManager->find(appId, channelName);
+                        RofRof::IChannel<SSL, isServer> *channelPtr = this->webSocketHandler->channelManager->find(app->id, channelName);
                         if (channelPtr != nullptr) {
 
                             Json::Value response;
@@ -96,9 +118,15 @@ namespace RofRof {
         }
 
         void fetchChannels(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-            Json::Value root;
+            App *app = this->ensureValidAppId(res, req);
+            if (app == nullptr) {
+                return;
+            }
+            if (!ensureValidAppSignature(req, app, "")) {
+                return;
+            }
 
-            std::string appId = (std::string) req->getParameter(0);
+            Json::Value root;
 
             auto info = (std::string) req->getQuery("info");
             auto filter_by_prefix = (std::string) req->getQuery("filter_by_prefix");
@@ -112,7 +140,7 @@ namespace RofRof {
 
             Json::Value channs;
 
-            auto channels = channelManager->getChannels(appId);
+            auto channels = webSocketHandler->channelManager->getChannels(app->id);
             for (auto it = channels.begin(); it != channels.end(); it++) {
                 RofRof::IChannel<SSL, isServer> *channel = it->second;
                 if (!std::empty(filter_by_prefix) && channel->channelName.rfind(filter_by_prefix, 0) != 0) {
@@ -131,10 +159,17 @@ namespace RofRof {
         }
 
         void fetchChannel(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-            std::string appId = (std::string) req->getParameter(0);
+            App *app = this->ensureValidAppId(res, req);
+            if (app == nullptr) {
+                return;
+            }
+            if (!ensureValidAppSignature(req, app, "")) {
+                return;
+            }
+
             std::string channelName = (std::string) req->getParameter(1);
 
-            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(appId, channelName);
+            RofRof::IChannel<SSL, isServer> *channel = webSocketHandler->channelManager->find(app->id, channelName);
 
             if (channel == nullptr) {
                 Json::Value root;
@@ -148,7 +183,14 @@ namespace RofRof {
         }
 
         void fetchUsers(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-            std::string appId = (std::string) req->getParameter(0);
+            App *app = this->ensureValidAppId(res, req);
+            if (app == nullptr) {
+                return;
+            }
+            if (!ensureValidAppSignature(req, app, "")) {
+                return;
+            }
+
             std::string channelName = (std::string) req->getParameter(1);
 
             if (channelName.rfind("presence-", 0) != 0) {
@@ -158,7 +200,7 @@ namespace RofRof {
                 return;
             }
 
-            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(appId, channelName);
+            RofRof::IChannel<SSL, isServer> *channel = webSocketHandler->channelManager->find(app->id, channelName);
 
             if (channel == nullptr) {
                 Json::Value root;

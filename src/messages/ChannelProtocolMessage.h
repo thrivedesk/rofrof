@@ -53,7 +53,7 @@ namespace RofRof {
             std::cout << "Subscribing" << std::endl;
             auto data = static_cast<RofRof::PerUserData *>(this->ws->getUserData());
             std::cout << "Finding channel" << std::endl;
-            auto channel = channelManager->findOrCreate(data->appId, payload.message["channel"].asString());
+            auto channel = channelManager->findOrCreate(data->app->id, payload.message["channel"].asString());
             std::cout << "Channel found" << std::endl;
             channel->subscribe(this->ws, this->payload);
             std::cout << "Subscribed" << std::endl;
@@ -62,7 +62,7 @@ namespace RofRof {
         void unsubscribe() {
             std::cout << "Unsubscribing" << std::endl;
             auto data = static_cast<RofRof::PerUserData *>(this->ws->getUserData());
-            auto channel = channelManager->findOrCreate(data->appId, payload.message["channel"].asString());
+            auto channel = channelManager->findOrCreate(data->app->id, payload.message["channel"].asString());
             channel->unsubscribe(this->ws);
         }
     };

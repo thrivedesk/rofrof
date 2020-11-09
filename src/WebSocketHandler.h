@@ -13,6 +13,8 @@
 #include "messages/IMessageComponent.h"
 #include "messages/IMessageCallable.h"
 #include "messages/MessageFactory.h"
+#include "apps/IAppManager.h"
+#include "apps/AppManager.h"
 
 unsigned long long random10() {
     static std::string digits = "0123456789";
@@ -37,16 +39,32 @@ unsigned long long unique_random10() {
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct WebSocketHandler : public IMessageComponent<SSL, isServer>, public IMessageCallable<SSL, isServer> {
-        IChannelManager<SSL, isServer> *channelManager;
-        MessageFactory<SSL, isServer> *messageFactory;
+        RofRof::IChannelManager<SSL, isServer> *channelManager;
+        RofRof::IAppManager<SSL, isServer> *appManager;
+        RofRof::MessageFactory<SSL, isServer> *messageFactory;
 
     public:
         WebSocketHandler() {
             unsigned int n = 99999999;
             srand(n);
 
-            this->channelManager = new RofRof::ChannelManager<false, true>();
-            this->messageFactory = new RofRof::MessageFactory<false, true>();
+            this->appManager = new RofRof::AppManager<SSL, isServer>();
+            this->channelManager = new RofRof::ChannelManager<SSL, isServer>();
+            this->messageFactory = new RofRof::MessageFactory<SSL, isServer>();
+        }
+
+        App *ensureValidAppId(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+            std::string appKey = std::string(req->getParameter(0));
+            if (!std::empty(appKey)) {
+                App *app = appManager->findByKey(appKey);
+                if (app != nullptr) {
+                    return app;
+                }
+            }
+
+            res->writeStatus("401 Unauthorized");
+            res->end("Unknown app key " + appKey + " provided.");
+            return nullptr;
         }
 
         void onUpgrade(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req, us_socket_context_t *context) {
@@ -54,11 +72,8 @@ namespace RofRof {
              * PerSocketData is valid from .open to .close event, accessed with ws->getUserData().
              * HttpRequest (req) is ONLY valid in this very callback, so any data you will need later
              * has to be COPIED into PerSocketData here. */
-            std::string appId = (std::string) req->getParameter(0);
-
-            if (std::empty(appId)) {
-                std::cout << "No app found" << std::endl;
-                res->end("No app found");
+            App *app = ensureValidAppId(res, req);
+            if (app == nullptr) {
                 return;
             }
 
@@ -74,7 +89,7 @@ namespace RofRof {
             res->template upgrade<RofRof::PerUserData>({
                                                                /* We initialize PerSocketData struct here */
                                                                .socketId = socketId,
-                                                               .appId = appId
+                                                               .app = app
                                                        },
                                                        req->getHeader("sec-websocket-key"),
                                                        req->getHeader("sec-websocket-protocol"),
@@ -96,7 +111,7 @@ namespace RofRof {
 //                    ->establishConnection(ws);
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
 
-            std::cout << "New Connection to AppID: " << data->appId << " With Socket ID: " << data->socketId
+            std::cout << "New Connection to AppID: " << data->app->id << " With Socket ID: " << data->socketId
                       << std::endl;
             Json::Value root;
             Json::Value rdata;

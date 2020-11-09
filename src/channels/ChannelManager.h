@@ -119,7 +119,7 @@ namespace RofRof {
         void removeFromAllChannels(uWS::WebSocket<SSL, isServer> *ws) override {
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
 
-            auto appIt = apps.find(data->appId);
+            auto appIt = apps.find(data->app->id);
             if (appIt == apps.end()) {
                 return;
             }

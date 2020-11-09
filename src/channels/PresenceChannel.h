@@ -9,12 +9,6 @@
 #include "IChannel.h"
 
 namespace RofRof {
-
-    struct UserData {
-        std::string userId;
-        std::string channelData;
-    };
-
     template<bool SSL, bool isServer>
     struct PresenceChannel : public IChannel<SSL, isServer> {
         std::map<std::string, Json::Value> users;
