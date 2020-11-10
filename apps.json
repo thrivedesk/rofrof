@@ -1,0 +1,13 @@
+[
+  {
+    "name": "ThriveDesk",
+    "id": "23213132132",
+    "key": "7a9ce22252e345dc19e7",
+    "secret": "d5745a78a4ea5016cbe4",
+    "host": "",
+    "path": "",
+    "client_messages_enabled": true,
+    "capacity": 1000,
+    "statistics_enabled": false
+  }
+]

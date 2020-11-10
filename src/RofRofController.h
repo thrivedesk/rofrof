@@ -6,6 +6,8 @@
 #define ROFROF_ROFROFCONTROLLER_H
 
 #include <iostream>
+#include "exceptions/SignatureMismatchException.h"
+#include "exceptions/InvalidAppIdException.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -30,14 +32,12 @@ namespace RofRof {
                 }
             }
 
-            res->writeStatus("401 Unauthorized");
-            res->end("Unknown app id " + appId + " provided.");
-            return nullptr;
+            throw RofRof::InvalidAppIdException();
         }
 
-        bool ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
+        void ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
             // TODO: add signature validation
-            return true;
+            throw RofRof::SignatureMismatchException();
         }
 
     public:
@@ -47,9 +47,6 @@ namespace RofRof {
 
         void triggerEvent(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
             App *app = this->ensureValidAppId(res, req);
-            if (app == nullptr) {
-                return;
-            }
 
             /* Allocate automatic, stack, variable as usual */
             std::string buffer;
@@ -60,10 +57,7 @@ namespace RofRof {
 
                 if (last) {
                     /* When this socket dies (times out) it will RAII release everything */
-
-                    if (!ensureValidAppSignature(req, app, buffer)) {
-                        return;
-                    }
+                    ensureValidAppSignature(req, app, buffer);
 
                     Json::Value payload;
                     JSONCPP_STRING err;
@@ -119,12 +113,7 @@ namespace RofRof {
 
         void fetchChannels(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
             App *app = this->ensureValidAppId(res, req);
-            if (app == nullptr) {
-                return;
-            }
-            if (!ensureValidAppSignature(req, app, "")) {
-                return;
-            }
+            ensureValidAppSignature(req, app, "");
 
             Json::Value root;
 
@@ -160,12 +149,7 @@ namespace RofRof {
 
         void fetchChannel(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
             App *app = this->ensureValidAppId(res, req);
-            if (app == nullptr) {
-                return;
-            }
-            if (!ensureValidAppSignature(req, app, "")) {
-                return;
-            }
+            ensureValidAppSignature(req, app, "");
 
             std::string channelName = (std::string) req->getParameter(1);
 
@@ -184,12 +168,7 @@ namespace RofRof {
 
         void fetchUsers(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
             App *app = this->ensureValidAppId(res, req);
-            if (app == nullptr) {
-                return;
-            }
-            if (!ensureValidAppSignature(req, app, "")) {
-                return;
-            }
+            ensureValidAppSignature(req, app, "");
 
             std::string channelName = (std::string) req->getParameter(1);
 

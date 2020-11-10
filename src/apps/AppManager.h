@@ -12,8 +12,10 @@
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct AppManager : public RofRof::IAppManager<SSL, isServer> {
+    private:
         std::vector<RofRof::App *> apps;
 
+    public:
         RofRof::App *findById(std::string appId) override {
             for (auto &app: apps) {
                 if (app->id == appId) {
@@ -44,9 +46,8 @@ namespace RofRof {
             return nullptr;
         }
 
-        RofRof::App *instantiate(std::string appId) override {
-            // somehow find this app configuration
-            Json::Value config;
+        RofRof::App *instantiate(Json::Value &config) override {
+            std::string appId = config["id"].asString();
             std::string appKey = config["key"].asString();
             std::string appSecret = config["secret"].asString();
             std::string appName = config["name"].asString();

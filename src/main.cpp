@@ -6,12 +6,16 @@
 #include "PerUserData.h"
 #include "WebSocketHandler.h"
 #include "RofRofController.h"
+#include "apps/ConfigFileReader.h"
 
 int main() {
     const bool SSL = false;
     const bool isServer = true;
     auto *websocketHandler = new RofRof::WebSocketHandler<SSL, isServer>();
     auto *controller = new RofRof::RofRofController<SSL, isServer>(websocketHandler);
+
+    auto *configReader = new RofRof::ConfigFileReader<SSL, isServer>();
+    configReader->read("apps.json")->make(websocketHandler->appManager);
 
     uWS::App()
             .get("/*", [](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
@@ -21,7 +25,12 @@ int main() {
                 controller->triggerEvent(res, req);
             })
             .get("/apps/:appId/channels", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                controller->fetchChannels(res, req);
+                try {
+                    controller->fetchChannels(res, req);
+                } catch (RofRof::RofRofException &e) {
+                    res->writeStatus(e.status)->end(e.what());
+                    std::cout << "Error occurred: " << e.what() << " Status: " << e.status << std::endl;
+                }
             })
             .get("/apps/:appId/channels/:channelName", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
                 controller->fetchChannel(res, req);

@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "App.h"
+#include <jsoncpp/json/json.h>
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -17,7 +18,7 @@ namespace RofRof {
 
         virtual RofRof::App *findBySecret(std::string appSecret) = 0;
 
-        virtual RofRof::App *instantiate(std::string appId) = 0;
+        virtual RofRof::App *instantiate(Json::Value &config) = 0;
 
         virtual std::vector<RofRof::App *> all() = 0;
     };

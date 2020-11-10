@@ -27,8 +27,7 @@ namespace RofRof {
 
             if (channelName.rfind("presence-", 0) == 0) {
                 std::cout << "Making presence channel" << std::endl;
-                RofRof::PresenceChannel<SSL, isServer> *channel = new RofRof::PresenceChannel<SSL, isServer>(
-                        channelName);
+                RofRof::PresenceChannel<SSL, isServer> *channel = new RofRof::PresenceChannel<SSL, isServer>(channelName);
                 return channel;
             }
             std::cout << "Making generic channel" << std::endl;
