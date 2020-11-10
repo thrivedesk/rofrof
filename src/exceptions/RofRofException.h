@@ -11,6 +11,7 @@
 namespace RofRof {
     struct RofRofException : public std::exception {
     public:
+        int code = 4001;
         std::string status = "401 Unauthorized";
     };
 }

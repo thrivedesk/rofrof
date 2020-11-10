@@ -17,6 +17,7 @@ namespace RofRof {
         }
 
         void subscribe(uWS::WebSocket <SSL, isServer> *ws, RofRof::Payload &payload) override {
+            this->verifySignature(ws, payload);
             this->saveConnection(ws);
 
             Json::Value root;

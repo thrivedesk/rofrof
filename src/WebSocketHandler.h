@@ -15,6 +15,8 @@
 #include "messages/MessageFactory.h"
 #include "apps/IAppManager.h"
 #include "apps/AppManager.h"
+#include "exceptions/RofRofException.h"
+#include "exceptions/InvalidAppKeyException.h"
 
 unsigned long long random10() {
     static std::string digits = "0123456789";
@@ -42,6 +44,8 @@ namespace RofRof {
         RofRof::IChannelManager<SSL, isServer> *channelManager;
         RofRof::IAppManager<SSL, isServer> *appManager;
         RofRof::MessageFactory<SSL, isServer> *messageFactory;
+    private:
+        Json::StreamWriterBuilder builder;
 
     public:
         WebSocketHandler() {
@@ -53,7 +57,7 @@ namespace RofRof {
             this->messageFactory = new RofRof::MessageFactory<SSL, isServer>();
         }
 
-        App *ensureValidAppId(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+        App *ensureValidAppKey(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
             std::string appKey = std::string(req->getParameter(0));
             if (!std::empty(appKey)) {
                 App *app = appManager->findByKey(appKey);
@@ -62,66 +66,64 @@ namespace RofRof {
                 }
             }
 
-            res->writeStatus("401 Unauthorized");
-            res->end("Unknown app key " + appKey + " provided.");
-            return nullptr;
+            throw RofRof::InvalidAppKeyException();
         }
 
         void onUpgrade(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req, us_socket_context_t *context) {
-            /* You may read from req only here, and COPY whatever you need into your PerSocketData.
-             * PerSocketData is valid from .open to .close event, accessed with ws->getUserData().
-             * HttpRequest (req) is ONLY valid in this very callback, so any data you will need later
-             * has to be COPIED into PerSocketData here. */
-            App *app = ensureValidAppId(res, req);
-            if (app == nullptr) {
-                return;
+            try {
+                /* You may read from req only here, and COPY whatever you need into your PerSocketData.
+                 * PerSocketData is valid from .open to .close event, accessed with ws->getUserData().
+                 * HttpRequest (req) is ONLY valid in this very callback, so any data you will need later
+                 * has to be COPIED into PerSocketData here. */
+                App *app = ensureValidAppKey(res, req);
+
+                unsigned long long part1 = unique_random10();
+                unsigned long long part2 = unique_random10();
+
+                char buffer[25];
+                std::sprintf(buffer, "%llu.%llu", part1, part2);
+
+                std::string socketId = (std::string) buffer;
+
+                /* Immediately upgrading without doing anything "async" before, is simple */
+                res->template upgrade<RofRof::PerUserData>({
+                                                                   /* We initialize PerSocketData struct here */
+                                                                   .socketId = socketId,
+                                                                   .app = app
+                                                           },
+                                                           req->getHeader("sec-websocket-key"),
+                                                           req->getHeader("sec-websocket-protocol"),
+                                                           req->getHeader("sec-websocket-extensions"),
+                                                           context);
+
+                /* If you don't want to upgrade you can instead respond with custom HTTP here,
+                 * such as res->writeStatus(...)->writeHeader(...)->end(...); or similar.*/
+
+                /* Performing async upgrade, such as checking with a database is a little more complex;
+                 * see UpgradeAsync example instead. */
+            } catch (RofRof::RofRofException &e) {
+                res->writeStatus(e.status)->end(e.what());
             }
-
-            unsigned long long part1 = unique_random10();
-            unsigned long long part2 = unique_random10();
-
-            char buffer[25];
-            std::sprintf(buffer, "%llu.%llu", part1, part2);
-
-            std::string socketId = (std::string) buffer;
-
-            /* Immediately upgrading without doing anything "async" before, is simple */
-            res->template upgrade<RofRof::PerUserData>({
-                                                               /* We initialize PerSocketData struct here */
-                                                               .socketId = socketId,
-                                                               .app = app
-                                                       },
-                                                       req->getHeader("sec-websocket-key"),
-                                                       req->getHeader("sec-websocket-protocol"),
-                                                       req->getHeader("sec-websocket-extensions"),
-                                                       context);
-
-            /* If you don't want to upgrade you can instead respond with custom HTTP here,
-             * such as res->writeStatus(...)->writeHeader(...)->end(...); or similar.*/
-
-            /* Performing async upgrade, such as checking with a database is a little more complex;
-             * see UpgradeAsync example instead. */
         }
 
         void onOpen(uWS::WebSocket<SSL, isServer> *ws) override {
-//            this
-//                    ->verifyAppKey(ws)
+            try {
 //                    ->limitConcurrentConnections(ws)
-//                    ->generateSocketId(ws)
-//                    ->establishConnection(ws);
-            auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
+                auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
 
-            std::cout << "New Connection to AppID: " << data->app->id << " With Socket ID: " << data->socketId
-                      << std::endl;
-            Json::Value root;
-            Json::Value rdata;
-            rdata["socket_id"] = data->socketId;
-            rdata["activity_timeout"] = 30;
-            root["event"] = "pusher:connection_established";
-            root["data"] = rdata;
-            Json::StreamWriterBuilder builder;
-            const std::string response = Json::writeString(builder, root);
-            ws->send(response, uWS::OpCode::TEXT);
+                std::cout << "New Connection to AppID: " << data->app->id << " With Socket ID: " << data->socketId << std::endl;
+                Json::Value root;
+                Json::Value rdata;
+                rdata["socket_id"] = data->socketId;
+                rdata["activity_timeout"] = 30;
+                root["event"] = "pusher:connection_established";
+                root["data"] = rdata;
+                Json::StreamWriterBuilder builder;
+                const std::string response = Json::writeString(builder, root);
+                ws->send(response, uWS::OpCode::TEXT);
+            } catch (RofRof::RofRofException &e) {
+                ws->send(e.what(), uWS::OpCode::TEXT);
+            }
         }
 
         void onDrain(uWS::WebSocket<SSL, isServer> *ws) {
@@ -129,31 +131,53 @@ namespace RofRof {
         }
 
         void onMessage(uWS::WebSocket<SSL, isServer> *ws, std::string_view message, uWS::OpCode opCode) override {
-            std::cout << "Message received: " << message << std::endl;
+            try {
+                std::cout << "Message received: " << message << std::endl;
 
-            JSONCPP_STRING err;
-            Json::Value msg;
+                JSONCPP_STRING err;
+                Json::Value msg;
 
-            Json::CharReaderBuilder builder;
-            const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-            if (!reader->parse(message.cbegin(), message.cend(), &msg, &err)) {
-                std::cout << "error" << std::endl;
-                return;
+                Json::CharReaderBuilder builder;
+                const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+                if (!reader->parse(message.cbegin(), message.cend(), &msg, &err)) {
+                    std::cout << "error" << std::endl;
+                    return;
+                }
+
+                RofRof::Payload payload(msg);
+
+                auto iMessage = messageFactory->createForMessage(payload, ws, channelManager);
+                iMessage->respond();
+            } catch (RofRof::RofRofException &e) {
+                std::string response;
+                Json::Value root;
+                root["event"] = "pusher:error";
+                Json::Value data;
+                data["code"] = e.code;
+                data["message"] = e.status;
+                root["data"] = data;
+
+                response = Json::writeString(builder, root);
+
+                ws->send(response, uWS::OpCode::TEXT);
             }
-
-            RofRof::Payload payload(msg);
-
-            auto iMessage = messageFactory->createForMessage(payload, ws, channelManager);
-            iMessage->respond();
         }
 
         void onClose(uWS::WebSocket<SSL, isServer> *ws, int code, std::string_view message) override {
-            channelManager->removeFromAllChannels(ws);
-            std::cout << "Connection closed" << std::endl;
+            try {
+                channelManager->removeFromAllChannels(ws);
+                std::cout << "Connection closed" << std::endl;
+            } catch (RofRof::RofRofException &e) {
+                ws->send(e.what(), uWS::OpCode::TEXT);
+            }
         }
 
         void onError(uWS::WebSocket<SSL, isServer> *ws, std::exception exception) override {
-            std::cout << "Error occurred" << std::endl;
+            try {
+                std::cout << "Error occurred" << std::endl;
+            } catch (RofRof::RofRofException &e) {
+                ws->send(e.what(), uWS::OpCode::TEXT);
+            }
         }
 
     protected:

@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 #include "../Payload.h"
+#include "../utils/utils.h"
+#include "../exceptions/SignatureMismatchException.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -14,7 +16,24 @@ namespace RofRof {
         std::map<std::string, uWS::WebSocket<SSL, isServer> *> subscribedConnections;
 
         void verifySignature(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload &payload) {
+            std::string auth_signature = payload.message["auth"].asString();
+            std::string expected_signature = auth_signature.substr(auth_signature.find(':') + 1);
+            std::string signature_str;
+            auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
+            signature_str += data->socketId;
+            signature_str += ':';
+            signature_str += this->channelName;
+            std::string channel_data = payload.message["channel_data"].asString();
+            if (!std::empty(channel_data)) {
+                signature_str += ":";
+                signature_str += channel_data;
+            }
 
+            std::string calculated_signature = RofRof::Strings::hmac_sha256(data->app->secret, signature_str);
+
+            if (calculated_signature != expected_signature) {
+                throw RofRof::SignatureMismatchException();
+            }
         }
 
         void saveConnection(uWS::WebSocket<SSL, isServer> *ws) {
