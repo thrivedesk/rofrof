@@ -9,7 +9,6 @@
 #include "exceptions/SignatureMismatchException.h"
 #include "exceptions/InvalidAppIdException.h"
 #include "utils/utils.h"
-#include <openssl/md5.h>
 #include <boost/algorithm/string.hpp>
 
 namespace RofRof {
@@ -42,17 +41,8 @@ namespace RofRof {
             // ordered map
             std::map<std::string, std::string> reqs;
 
-//            std::string shouldIgnore[5] = {
-//                    "auth_signature",
-//                    "body_md5",
-//                    "appId",
-//                    "appKey",
-//                    "channelName",
-//            };
-
             // map the query string into params map
             std::string queryString = std::string(req->getQuery());
-            std::cout << "Actual query: " << req->getQuery() << std::endl;
             std::vector<std::string> reqPairs = RofRof::Strings::explode(queryString, '&');
             for (const std::string &qPairStr: reqPairs) {
                 std::vector<std::string> qPair = RofRof::Strings::explode(qPairStr, '=');
@@ -71,9 +61,7 @@ namespace RofRof {
 
             // get content md5 if necessary
             if (!std::empty(content)) {
-                unsigned char body_md5[MD5_DIGEST_LENGTH];
-                MD5((unsigned char *) content.c_str(), content.size(), body_md5);
-                reqs["body_md5"] = std::string(reinterpret_cast<char *>(body_md5));
+                reqs["body_md5"] = RofRof::Strings::md5(content);
             }
 
             // join as string
@@ -112,12 +100,18 @@ namespace RofRof {
 
                 if (last) {
                     /* When this socket dies (times out) it will RAII release everything */
-                    ensureValidAppSignature(req, app, buffer);
+                    try {
+                        ensureValidAppSignature(req, app, buffer);
+                    }
+                    catch (RofRof::RofRofException &e) {
+                        res->writeStatus(e.status)->end(e.what());
+                        return;
+                    }
 
                     Json::Value payload;
                     JSONCPP_STRING err;
                     auto message = std::string_view(buffer);
-                    std::cout << "After convert: " << message << std::endl;
+
                     Json::CharReaderBuilder builder;
                     const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
                     if (!reader->parse(message.cbegin(), message.cend(), &payload, &err)) {
@@ -128,11 +122,10 @@ namespace RofRof {
                     buffer = "";
                     message = "";
 
-                    std::cout << "Parsed data: " << payload << std::endl;
                     Json::Value channels = payload["channels"];
                     if (!channels.isArray()) {
-                        std::cout << "Channels not an array" << std::endl;
                         res->writeStatus("400 Bad Request")->end("Channel not an array");
+                        return;
                     }
 
                     std::string dataMsg = payload["data"].asString();

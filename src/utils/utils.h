@@ -8,13 +8,13 @@
 #include <string>
 #include <vector>
 #include <iomanip>
-#include <openssl/engine.h>
 #include <openssl/hmac.h>
-#include <openssl/evp.h>
+#include <openssl/md5.h>
+
 
 namespace RofRof {
-    namespace Strings {
-        std::vector<std::string> explode(const std::string &str, const char &ch) {
+    struct Strings {
+        static std::vector<std::string> explode(const std::string &str, const char &ch) {
             std::string next;
             std::vector<std::string> result;
 
@@ -38,7 +38,7 @@ namespace RofRof {
             return result;
         }
 
-        std::string implode_map(const char &glue, const char &separator, const std::map<std::string, std::string> &params) {
+        static std::string implode_map(const char &glue, const char &separator, const std::map<std::string, std::string> &params) {
             std::string str;
 
             for (auto &param : params) {
@@ -53,7 +53,7 @@ namespace RofRof {
             return str;
         }
 
-        std::string hmac_sha256(const std::string &key, const std::string &msg) {
+        static std::string hmac_sha256(const std::string &key, const std::string &msg) {
             unsigned char hash[32];
 
             HMAC_CTX *ctx = HMAC_CTX_new();
@@ -63,16 +63,26 @@ namespace RofRof {
             HMAC_Final(ctx, hash, &len);
             HMAC_CTX_free(ctx);
 
+            return char_array_to_string(hash, len);
+        }
+
+        static std::string md5(const std::string &content) {
+            unsigned char body_md5[MD5_DIGEST_LENGTH];
+            MD5((unsigned char *) content.c_str(), content.size(), body_md5);
+            return char_array_to_string(body_md5, MD5_DIGEST_LENGTH);
+        }
+
+        static std::string char_array_to_string(unsigned char *array, unsigned int len) {
             std::string str;
             for (int i = 0; i < len; i++) {
                 char c[3];
-                std::sprintf(c, "%02x", hash[i]);
+                std::sprintf(c, "%02x", array[i]);
                 str += c;
             }
 
             return str;
         }
-    }
+    };
 }
 
 #endif //ROFROF_UTILS_H

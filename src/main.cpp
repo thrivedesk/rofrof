@@ -22,21 +22,32 @@ int main() {
                 res->end("The fastest WebSocket server in the world!!!");
             })
             .post("/apps/:appId/events", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                controller->triggerEvent(res, req);
+                try {
+                    controller->triggerEvent(res, req);
+                } catch (RofRof::RofRofException &e) {
+                    res->writeStatus(e.status)->end(e.what());
+                }
             })
             .get("/apps/:appId/channels", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
                 try {
                     controller->fetchChannels(res, req);
                 } catch (RofRof::RofRofException &e) {
                     res->writeStatus(e.status)->end(e.what());
-                    std::cout << "Error occurred: " << e.what() << " Status: " << e.status << std::endl;
                 }
             })
             .get("/apps/:appId/channels/:channelName", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                controller->fetchChannel(res, req);
+                try {
+                    controller->fetchChannel(res, req);
+                } catch (RofRof::RofRofException &e) {
+                    res->writeStatus(e.status)->end(e.what());
+                }
             })
             .get("/apps/:appId/channels/:channelName/users", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                controller->fetchUsers(res, req);
+                try {
+                    controller->fetchUsers(res, req);
+                } catch (RofRof::RofRofException &e) {
+                    res->writeStatus(e.status)->end(e.what());
+                }
             })
             .ws<RofRof::PerUserData>("/app/:appId", {
                     /* Settings */
