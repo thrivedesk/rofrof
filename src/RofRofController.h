@@ -8,6 +8,9 @@
 #include <iostream>
 #include "exceptions/SignatureMismatchException.h"
 #include "exceptions/InvalidAppIdException.h"
+#include "utils/utils.h"
+#include <openssl/md5.h>
+#include <boost/algorithm/string.hpp>
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -35,9 +38,61 @@ namespace RofRof {
             throw RofRof::InvalidAppIdException();
         }
 
-        void ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
-            // TODO: add signature validation
-            throw RofRof::SignatureMismatchException();
+        std::map<std::string, std::string> ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
+            // ordered map
+            std::map<std::string, std::string> reqs;
+
+//            std::string shouldIgnore[5] = {
+//                    "auth_signature",
+//                    "body_md5",
+//                    "appId",
+//                    "appKey",
+//                    "channelName",
+//            };
+
+            // map the query string into params map
+            std::string queryString = std::string(req->getQuery());
+            std::cout << "Actual query: " << req->getQuery() << std::endl;
+            std::vector<std::string> reqPairs = RofRof::Strings::explode(queryString, '&');
+            for (const std::string &qPairStr: reqPairs) {
+                std::vector<std::string> qPair = RofRof::Strings::explode(qPairStr, '=');
+                const std::string key = qPair.at(0);
+
+                if (key == "auth_signature" || key == "body_md5") {
+                    continue;
+                }
+
+                if (qPair.size() == 2) {
+                    reqs[key] = qPair.at(1);
+                } else {
+                    reqs[key] = "";
+                }
+            }
+
+            // get content md5 if necessary
+            if (!std::empty(content)) {
+                unsigned char body_md5[MD5_DIGEST_LENGTH];
+                MD5((unsigned char *) content.c_str(), content.size(), body_md5);
+                reqs["body_md5"] = std::string(reinterpret_cast<char *>(body_md5));
+            }
+
+            // join as string
+            std::string signature;
+
+            signature += std::string(req->getMethod());
+            boost::to_upper(signature);
+            signature += "\n";
+            signature += std::string(req->getUrl());
+            signature += "\n";
+            signature += RofRof::Strings::implode_map('=', '&', reqs);
+            std::string calculated_signature = RofRof::Strings::hmac_sha256(app->secret, signature);
+            std::string expected_signature = std::string(req->getQuery("auth_signature"));
+
+            if (calculated_signature != expected_signature) {
+                throw RofRof::SignatureMismatchException();
+            }
+
+            return std::move(reqs);
         }
 
     public:
