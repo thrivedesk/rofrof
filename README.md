@@ -34,3 +34,23 @@ g++ -flto -O3 -Wconversion -std=c++2a -lpthread -pthread -IuWebSockets/src -IuWe
 ```
 ./build/rofrof
 ```
+
+### Progress
+
+- [x] App support
+- [x] Client message 
+- [x] Private Channel 
+- [x] Presence Channel 
+- [x] HTTP Channels API 
+- [x] HTTP Channel API 
+- [x] HTTP User API 
+- [x] HTTP Trigger API 
+- [x] Signature verification 
+- [ ] Concurrent user limit per app  
+- [ ] Hostname check  
+- [ ] Path check  
+- [ ] Webhook support
+- [ ] Write tests
+- [ ] Write benchmark
+- [ ] Optimize code
+- [ ] Optimize memory and computation
