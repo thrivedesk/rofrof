@@ -49,6 +49,7 @@ g++ -flto -O3 -Wconversion -std=c++2a -lpthread -pthread -IuWebSockets/src -IuWe
 - [ ] Concurrent user limit per app  
 - [ ] Hostname check  
 - [ ] Path check  
+- [ ] Thread safe
 - [ ] Webhook support
 - [ ] Write tests
 - [ ] Write benchmark
