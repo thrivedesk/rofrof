@@ -15,14 +15,14 @@ namespace RofRof {
     template<bool SSL, bool isServer>
     struct MessageFactory {
     public:
-        std::unique_ptr<RofRof::IMessage> createForMessage(RofRof::Payload &payload, uWS::WebSocket<SSL, isServer> *ws, RofRof::IChannelManager<SSL, isServer> *channelManager) {
-            std::cout << "Event: " << payload.event << std::endl;
-            if (payload.event.rfind("pusher:", 0) == 0) {
+        RofRof::IMessage* createForMessage(RofRof::Payload *payload, uWS::WebSocket<SSL, isServer> *ws, RofRof::IChannelManager<SSL, isServer> *channelManager) {
+            std::cout << "Event: " << payload->event << std::endl;
+            if (payload->event.rfind("pusher:", 0) == 0) {
                 std::cout << "Protocol message" << std::endl;
-                return std::make_unique<RofRof::ChannelProtocolMessage<SSL, isServer>>(payload, ws, channelManager);
+                return new RofRof::ChannelProtocolMessage<SSL, isServer>(payload, ws, channelManager);
             }
             std::cout << "Client message" << std::endl;
-            return std::make_unique<RofRof::ClientMessage<SSL, isServer>>(payload, ws, channelManager);
+            return new RofRof::ClientMessage<SSL, isServer>(payload, ws, channelManager);
         }
     };
 }

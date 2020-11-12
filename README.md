@@ -7,12 +7,14 @@ Standard: C++2a
 
 ### Dependencies
 * uNetWorking/uWebSockets#v18.15.0
-* jsoncpp
+* libjsoncpp-dev
 * libabsl
     * http://archive.ubuntu.com/ubuntu/pool/universe/a/abseil/libabsl20200225_0~20200225.2-3_amd64.deb
     * http://archive.ubuntu.com/ubuntu/pool/universe/a/abseil/libabsl-dev_0~20200225.2-3_amd64.deb
-* openssl
+* libssl-dev
 * libboost1.71-dev
+* zlib1g-dev
+* libuv1-dev
 
 ### Prepare
 

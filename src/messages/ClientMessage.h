@@ -14,33 +14,25 @@ namespace RofRof {
     template<bool SSL, bool isServer>
     struct ClientMessage : public IMessage {
     public:
-        Payload payload;
+        Payload *payload;
         uWS::WebSocket<SSL, isServer> *ws;
         RofRof::IChannelManager<SSL, isServer> *channelManager;
 
-        ClientMessage(Payload &payload, uWS::WebSocket<SSL, isServer> *ws,
-                      IChannelManager <SSL, isServer> *channelManager) {
+        ClientMessage(Payload *payload, uWS::WebSocket<SSL, isServer> *ws, IChannelManager <SSL, isServer> *channelManager) {
             this->payload = payload;
             this->ws = ws;
             this->channelManager = channelManager;
         }
 
-        ClientMessage(const ClientMessage &) = delete;
-
-        ClientMessage &operator=(const ClientMessage &) = delete;
-
-        ~ClientMessage() = default;
-
-
         void respond() override {
-            if (payload.event.rfind("client-", 0) != 0) {
+            if (payload->event.rfind("client-", 0) != 0) {
                 return;
             }
 
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
-            std::cout << " Client Message to channel " << payload.channel << std::endl;
+            std::cout << " Client Message to channel " << payload->channel << std::endl;
 
-            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(data->app->id, payload.channel);
+            RofRof::IChannel<SSL, isServer> *channel = channelManager->find(data->app->id, payload->channel);
 
             if (channel == nullptr) {
                 std::cout << "Channel does not exist" << std::endl;
@@ -48,9 +40,9 @@ namespace RofRof {
             }
 
             Json::Value root;
-            root["event"] = payload.event;
-            root["channel"] = payload.channel;
-            root["data"] = payload.message;
+            root["event"] = payload->event;
+            root["channel"] = payload->channel;
+            root["data"] = payload->message;
 
             channel->broadcastToOthers(ws, root);
 

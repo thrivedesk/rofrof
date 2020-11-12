@@ -16,7 +16,7 @@ namespace RofRof {
             this->channelName = channelName;
         }
 
-        void subscribe(uWS::WebSocket <SSL, isServer> *ws, RofRof::Payload &payload) override {
+        void subscribe(uWS::WebSocket <SSL, isServer> *ws, RofRof::Payload *payload) override {
             this->verifySignature(ws, payload);
             this->saveConnection(ws);
 

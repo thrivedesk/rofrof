@@ -10,7 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <memory>
 #include "IAppManager.h"
 

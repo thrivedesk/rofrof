@@ -67,9 +67,13 @@ int main() {
                 if (token) {
                     std::cout << "Thread " << std::this_thread::get_id() << " listening on port " << 7000 << std::endl;
                 } else {
-                    std::cout << "Thread " << std::this_thread::get_id() << " failed to listen on port 7000"
-                              << std::endl;
+                    std::cout << "Thread " << std::this_thread::get_id() << " failed to listen on port 7000" << std::endl;
                 }
             }).run();
 
+    delete websocketHandler;
+    delete controller;
+    delete configReader;
+
+    return 0;
 }

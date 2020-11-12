@@ -26,6 +26,12 @@ namespace RofRof {
             return nullptr;
         }
 
+        ~AppManager() {
+            for(RofRof::App* app:apps) {
+                delete app;
+            }
+        }
+
         RofRof::App *findByKey(std::string appKey) override {
             for (auto &app: apps) {
                 if (app->key == appKey) {

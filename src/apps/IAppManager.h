@@ -7,7 +7,7 @@
 
 #include <vector>
 #include "App.h"
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 
 namespace RofRof {
     template<bool SSL, bool isServer>

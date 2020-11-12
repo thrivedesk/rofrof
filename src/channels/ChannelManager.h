@@ -43,12 +43,6 @@ namespace RofRof {
             std::cout << "New channel manager constructed" << std::endl;
         }
 
-        ChannelManager(const ChannelManager &) = delete;
-
-        ChannelManager &operator=(const ChannelManager &) = delete;
-
-        ~ChannelManager() = default;
-
         RofRof::IChannel<SSL, isServer> *findOrCreate(std::string appId, std::string channelName) override {
             std::cout << "looking for app" << std::endl;
             auto appsIt = this->apps.find(appId);

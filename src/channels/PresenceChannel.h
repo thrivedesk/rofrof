@@ -70,11 +70,11 @@ namespace RofRof {
             return (unsigned int) users.size();
         }
 
-        void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload &payload) {
+        void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload *payload) override {
             this->verifySignature(ws, payload);
             this->saveConnection(ws);
 
-            std::string_view channel_str_data = payload.message["channel_data"].asCString();
+            std::string_view channel_str_data = payload->message["channel_data"].asCString();
 
             JSONCPP_STRING err;
             Json::Value channel_data;

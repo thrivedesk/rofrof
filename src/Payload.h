@@ -5,7 +5,7 @@
 #ifndef ROFROF_PAYLOAD_H
 #define ROFROF_PAYLOAD_H
 
-#include "jsoncpp/json/json.h"
+#include "json/json.h"
 
 namespace RofRof {
     struct Payload {

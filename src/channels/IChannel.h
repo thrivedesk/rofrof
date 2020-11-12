@@ -15,15 +15,15 @@ namespace RofRof {
     protected:
         std::map<std::string, uWS::WebSocket<SSL, isServer> *> subscribedConnections;
 
-        void verifySignature(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload &payload) {
-            std::string auth_signature = payload.message["auth"].asString();
+        void verifySignature(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload *payload) {
+            std::string auth_signature = payload->message["auth"].asString();
             std::string expected_signature = auth_signature.substr(auth_signature.find(':') + 1);
             std::string signature_str;
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
             signature_str += data->socketId;
             signature_str += ':';
             signature_str += this->channelName;
-            std::string channel_data = payload.message["channel_data"].asString();
+            std::string channel_data = payload->message["channel_data"].asString();
             if (!std::empty(channel_data)) {
                 signature_str += ":";
                 signature_str += channel_data;
@@ -59,7 +59,7 @@ namespace RofRof {
          * @param ws uWS::WebSocket<true, true>
          * @param payload
          */
-        virtual void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload &payload) = 0;
+        virtual void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload *payload) = 0;
 
         virtual void unsubscribe(uWS::WebSocket<SSL, isServer> *ws) = 0;
 

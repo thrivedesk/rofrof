@@ -13,33 +13,26 @@ namespace RofRof {
     template<bool SSL, bool isServer>
     struct ChannelProtocolMessage : public IMessage {
     private:
-        RofRof::Payload payload;
+        RofRof::Payload *payload;
         RofRof::IChannelManager<SSL, isServer> *channelManager;
         uWS::WebSocket<SSL, isServer> *ws;
     public:
-        ChannelProtocolMessage(RofRof::Payload &payload, uWS::WebSocket<SSL, isServer> *ws,RofRof::IChannelManager<SSL, isServer> *channelManager) {
+        ChannelProtocolMessage(RofRof::Payload *payload, uWS::WebSocket<SSL, isServer> *ws,RofRof::IChannelManager<SSL, isServer> *channelManager) {
             this->payload = payload;
             this->ws = ws;
             this->channelManager = channelManager;
         }
 
-        ChannelProtocolMessage(const ChannelProtocolMessage &) = delete;
-
-        ChannelProtocolMessage &operator=(const ChannelProtocolMessage &) = delete;
-
-        ~ChannelProtocolMessage() = default;
-
-
         void respond() override {
-            std::cout << "Event received: " << payload.event << std::endl;
-            if (payload.event.rfind("pusher:ping", 0) == 0) {
+            std::cout << "Event received: " << payload->event << std::endl;
+            if (payload->event.rfind("pusher:ping", 0) == 0) {
                 this->pong();
-            } else if (payload.event.rfind("pusher:subscribe", 0) == 0) {
+            } else if (payload->event.rfind("pusher:subscribe", 0) == 0) {
                 this->subscribe();
-            } else if (payload.event.rfind("pusher:unsubscribe", 0) == 0) {
+            } else if (payload->event.rfind("pusher:unsubscribe", 0) == 0) {
                 this->unsubscribe();
             } else {
-                std::cout << "Unsupported event detected: " << payload.event << std::endl;
+                std::cout << "Unsupported event detected: " << payload->event << std::endl;
             }
         }
 
@@ -53,7 +46,7 @@ namespace RofRof {
             std::cout << "Subscribing" << std::endl;
             auto data = static_cast<RofRof::PerUserData *>(this->ws->getUserData());
             std::cout << "Finding channel" << std::endl;
-            auto channel = channelManager->findOrCreate(data->app->id, payload.message["channel"].asString());
+            auto channel = channelManager->findOrCreate(data->app->id, payload->message["channel"].asString());
             std::cout << "Channel found" << std::endl;
             channel->subscribe(this->ws, this->payload);
             std::cout << "Subscribed" << std::endl;
@@ -62,7 +55,7 @@ namespace RofRof {
         void unsubscribe() {
             std::cout << "Unsubscribing" << std::endl;
             auto data = static_cast<RofRof::PerUserData *>(this->ws->getUserData());
-            auto channel = channelManager->findOrCreate(data->app->id, payload.message["channel"].asString());
+            auto channel = channelManager->findOrCreate(data->app->id, payload->message["channel"].asString());
             channel->unsubscribe(this->ws);
         }
     };

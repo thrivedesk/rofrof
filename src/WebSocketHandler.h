@@ -8,7 +8,7 @@
 #include <sstream>
 #include <random>
 #include <unordered_set>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include "channels/IChannelManager.h"
 #include "messages/IMessageComponent.h"
 #include "messages/IMessageCallable.h"
@@ -45,7 +45,8 @@ namespace RofRof {
         RofRof::IAppManager<SSL, isServer> *appManager;
         RofRof::MessageFactory<SSL, isServer> *messageFactory;
     private:
-        Json::StreamWriterBuilder builder;
+        Json::StreamWriterBuilder wBuilder;
+        Json::CharReaderBuilder rBuilder;
 
     public:
         WebSocketHandler() {
@@ -55,6 +56,12 @@ namespace RofRof {
             this->appManager = new RofRof::AppManager<SSL, isServer>();
             this->channelManager = new RofRof::ChannelManager<SSL, isServer>();
             this->messageFactory = new RofRof::MessageFactory<SSL, isServer>();
+        }
+
+        ~WebSocketHandler() {
+            delete appManager;
+            delete channelManager;
+            delete messageFactory;
         }
 
         App *ensureValidAppKey(uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
@@ -118,8 +125,8 @@ namespace RofRof {
                 rdata["activity_timeout"] = 30;
                 root["event"] = "pusher:connection_established";
                 root["data"] = rdata;
-                Json::StreamWriterBuilder builder;
-                const std::string response = Json::writeString(builder, root);
+
+                const std::string response = Json::writeString(wBuilder, root);
                 ws->send(response, uWS::OpCode::TEXT);
             } catch (RofRof::RofRofException &e) {
                 ws->send(e.what(), uWS::OpCode::TEXT);
@@ -137,17 +144,18 @@ namespace RofRof {
                 JSONCPP_STRING err;
                 Json::Value msg;
 
-                Json::CharReaderBuilder builder;
-                const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+                const std::unique_ptr<Json::CharReader> reader(rBuilder.newCharReader());
                 if (!reader->parse(message.cbegin(), message.cend(), &msg, &err)) {
                     std::cout << "error" << std::endl;
                     return;
                 }
 
-                RofRof::Payload payload(msg);
+                auto *payload = new Payload(msg);
 
-                auto iMessage = messageFactory->createForMessage(payload, ws, channelManager);
+                auto *iMessage = messageFactory->createForMessage(payload, ws, channelManager);
                 iMessage->respond();
+                delete iMessage;
+                delete payload;
             } catch (RofRof::RofRofException &e) {
                 std::string response;
                 Json::Value root;
@@ -157,7 +165,7 @@ namespace RofRof {
                 data["message"] = e.status;
                 root["data"] = data;
 
-                response = Json::writeString(builder, root);
+                response = Json::writeString(wBuilder, root);
 
                 ws->send(response, uWS::OpCode::TEXT);
             }
