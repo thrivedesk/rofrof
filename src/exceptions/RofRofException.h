@@ -13,6 +13,8 @@ namespace RofRof {
     public:
         int code = 4001;
         std::string status = "401 Unauthorized";
+
+        virtual ~RofRofException() = default;
     };
 }
 

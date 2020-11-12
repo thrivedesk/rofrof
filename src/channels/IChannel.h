@@ -45,6 +45,8 @@ namespace RofRof {
     public:
         std::string channelName;
 
+        virtual ~IChannel() = default;
+
         bool hasConnections() {
             std::cout << "Calling hasConnections() in " << this->channelName << std::endl;
             return !subscribedConnections.empty();

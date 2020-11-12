@@ -11,6 +11,7 @@ namespace RofRof {
     template<bool SSL, bool isServer>
     struct IChannelManager {
     public:
+        virtual ~IChannelManager() = default;
         virtual RofRof::IChannel<SSL, isServer> *findOrCreate(std::string appId, std::string channelName) = 0;
 
         virtual RofRof::IChannel<SSL, isServer> *find(std::string appId, std::string channelName) = 0;

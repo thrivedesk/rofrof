@@ -9,6 +9,7 @@ namespace RofRof {
     template<bool SSL, bool isServer>
     struct IMessageCallable {
     public:
+        virtual ~IMessageCallable() = default;
         virtual void onMessage(uWS::WebSocket<SSL, isServer> *ws, std::string_view message, uWS::OpCode opCode) = 0;
     };
 }

@@ -12,6 +12,7 @@
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct IAppManager {
+        virtual ~IAppManager() = default;
         virtual RofRof::App *findById(std::string appId) = 0;
 
         virtual RofRof::App *findByKey(std::string appKey) = 0;

@@ -8,6 +8,7 @@
 namespace RofRof {
     struct IMessage {
     public:
+        virtual ~IMessage() = default;
         virtual void respond() {
             std::cout << "Not implemented method IMessage::respond()" << std::endl;
         };
