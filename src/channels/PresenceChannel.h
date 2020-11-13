@@ -12,6 +12,8 @@
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct PresenceChannel : public IChannel<SSL, isServer> {
+    private:
+        std::mutex mtx;
         std::map<std::string, Json::Value> users;
 
     protected:
@@ -50,12 +52,19 @@ namespace RofRof {
 
         void p_unsubscribe(uWS::WebSocket<SSL, isServer> *ws) {
             auto data = static_cast<RofRof::PerUserData *>(ws->getUserData());
+
+            mtx.lock();
+//            std::cout << "Locked PresenceChannel->p_unsubscribe" << std::endl;
             auto it = this->subscribedConnections.find(data->socketId);
             if (it == this->subscribedConnections.end()) {
+                mtx.unlock();
+//                std::cout << "Unlocked PresenceChannel->p_unsubscribe" << std::endl;
                 return;
             }
             this->subscribedConnections.erase(it);
             this->connectionCount--;
+            mtx.unlock();
+//            std::cout << "Unlocked PresenceChannel->p_unsubscribe" << std::endl;
 
             RofRof::Logger::debug("Removed " , data->socketId , " from channel " , this->channelName);
         }
@@ -75,9 +84,13 @@ namespace RofRof {
 
         void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload *payload) override {
             this->verifySignature(ws, payload);
-            this->saveConnection(ws);
 
+            mtx.lock();
+//            std::cout << "Locked PresenceChannel->subscribe" << std::endl;
+            this->saveConnection(ws);
             this->connectionCount++;
+            mtx.unlock();
+//            std::cout << "Unlocked PresenceChannel->subscribe" << std::endl;
 
             std::string_view channel_str_data = payload->message["channel_data"].asCString();
 

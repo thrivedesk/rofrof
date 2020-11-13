@@ -70,7 +70,6 @@ int main() {
                                 websocketHandler->onOpen(ws);
                             },
                             .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                                std::cout << "Thread: " << std::this_thread::get_id() << std::endl;
                                 websocketHandler->onMessage(ws, message, opCode);
                             },
                             .drain = [&](auto *ws) {

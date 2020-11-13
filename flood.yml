@@ -1,20 +1,23 @@
 config:
   target: "ws://127.0.0.1:7000/app/7a9ce22252e345dc19e7?protocol=7&client=js&version=4.3.1&flash=false"
   phases:
-    - duration: 15
-      arrivalRate: 10
-      rampTo: 100
-      name: "Ramping up the load"
     - duration: 30
-      arrivalRate: 20
-      rampTo: 200
+      arrivalRate: 5
+      rampTo: 25
+      name: "Warming up"
+    - duration: 30
+      arrivalRate: 100
+      rampTo: 250
       name: "Ramping up the load"
-    - duration: 60
-      arrivalRate: 50
-      rampTo: 500
+    - duration: 240
+      arrivalRate: 500
+      rampTo: 1000
       name: "Pushing a constant load"
 scenarios:
   - engine: "ws"
     flow:
       - send: '{"event":"pusher:subscribe","data":{"channel":"public"}}'
       - think: 5
+      - send: '{"event":"client-message","data":{"hello":"world"},"channel":"public"}'
+      - think: 1
+      - send: '{"event":"client-message","data":{"hello":"world"},"channel":"public2"}'

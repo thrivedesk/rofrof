@@ -7,7 +7,7 @@
     "host": "",
     "path": "",
     "client_messages_enabled": true,
-    "capacity": 100000,
+    "capacity": 10000,
     "statistics_enabled": false
   }
 ]

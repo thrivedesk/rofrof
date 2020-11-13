@@ -51,10 +51,15 @@ g++ -flto -O3 -Wconversion -std=c++2a -lpthread -pthread -IuWebSockets/src -IuWe
 - [x] Concurrent user limit per app  
 - [ ] Hostname check  
 - [ ] Path check  
-- [ ] Thread safe
+- [x] Thread safe
+- [x] Multithreading
 - [ ] Cluster support
 - [ ] Webhook support
 - [ ] Write tests
 - [ ] Write benchmark
 - [ ] Optimize code
 - [ ] Optimize memory and computation
+
+### TODO:
+- [ ] Random number generator has bug
+- [ ] There's a memory leak somewhere in channel construction

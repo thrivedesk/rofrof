@@ -18,6 +18,8 @@ namespace RofRof {
     template<bool SSL, bool isServer>
     struct ChannelManager : public IChannelManager<SSL, isServer> {
     private:
+        std::mutex mtx;
+
         RofRof::IChannel<SSL, isServer> *makeChannel(std::string channelName) {
             if (channelName.rfind("private-", 0) == 0) {
                 RofRof::Logger::debug("Making private channel");
@@ -100,17 +102,16 @@ namespace RofRof {
                 return;
             }
 
-            std::map<std::string, RofRof::IChannel<SSL, isServer> *> app = appIt->second;
-            for (auto channelIt = app.begin(); channelIt != app.end(); channelIt++) {
+            mtx.lock();
+//            std::cout << "Locked channel manager" << std::endl;
+            std::map<std::string, RofRof::IChannel<SSL, isServer> *> channels = appIt->second;
+            for (auto channelIt = channels.begin(); channelIt != channels.end();) {
                 RofRof::IChannel<SSL, isServer> *channel = channelIt->second;
-                RofRof::Logger::debug("Unsubscribing from: " , channel->channelName);
+                RofRof::Logger::debug("Unsubscribing from: ", channel->channelName);
                 channel->unsubscribe(ws);
-            }
-            for (auto channelIt = app.cbegin(); channelIt != app.cend();) {
-                RofRof::IChannel<SSL, isServer> *channel = channelIt->second;
                 if (!channel->hasConnections()) {
-                    RofRof::Logger::debug("Erasing channel: " , channel->channelName);
-                    app.erase(channelIt++);
+                    RofRof::Logger::debug("Erasing channel: ", channel->channelName);
+                    channels.erase(channelIt++);
                 } else {
                     ++channelIt;
                 }
@@ -119,12 +120,14 @@ namespace RofRof {
             for (auto appIt2 = apps.begin(); appIt2 != apps.end();) {
                 std::map<std::string, RofRof::IChannel<SSL, isServer> *> app2 = appIt2->second;
                 if (app2.size() == 0) {
-                    RofRof::Logger::debug("Erasing app: " , appIt2->first);
+                    RofRof::Logger::debug("Erasing app: ", appIt2->first);
                     apps.erase(appIt2++);
                 } else {
                     ++appIt2;
                 }
             }
+            mtx.unlock();
+            std::cout << "Unlocked channel manager" << std::endl;
         }
     };
 }

@@ -47,6 +47,7 @@ namespace RofRof {
     private:
         Json::StreamWriterBuilder wBuilder;
         Json::CharReaderBuilder rBuilder;
+        std::mutex mtx;
 
     public:
         WebSocketHandler() {
@@ -83,10 +84,18 @@ namespace RofRof {
                  * HttpRequest (req) is ONLY valid in this very callback, so any data you will need later
                  * has to be COPIED into PerSocketData here. */
                 App *app = ensureValidAppKey(res, req);
+
+                mtx.lock();
+//                std::cout << "Locked upgrade" << std::endl;
                 if (app->connectionCount >= app->capacity) {
+//                    std::cout << "App capacity limit reached: " << app->connectionCount <<  "Capacity: " << app->capacity << std::endl;
                     res->writeStatus("425 Too Early")->end(R"({"event":"pusher:error", "message":"App capacity exceeded"})");
+                    mtx.unlock();
+//                    std::cout << "Unlocked upgrade" << std::endl;
                     return;
                 }
+                mtx.unlock();
+//                std::cout << "Unlocked upgrade" << std::endl;
 
                 unsigned long long part1 = unique_random10();
                 unsigned long long part2 = unique_random10();
@@ -120,10 +129,16 @@ namespace RofRof {
         void onOpen(uWS::WebSocket<SSL, isServer> *ws) override {
             try {
                 auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
+
+                mtx.lock();
+//                std::cout << "Locked onOpen" << std::endl;
                 data->app->connectionCount++;
 
                 RofRof::Logger::debug("New Connection to AppID: " , data->app->id , " With Socket ID: " , data->socketId);
                 RofRof::Logger::debug("Total connections: " , std::to_string(data->app->connectionCount));
+//                std::cout << "Connections: " << data->app->connectionCount <<  " Capacity: " << data->app->capacity << std::endl;
+                mtx.unlock();
+//                std::cout << "Unlocked onOpen" << std::endl;
 
                 Json::Value root;
                 Json::Value rdata;
@@ -180,7 +195,13 @@ namespace RofRof {
         void onClose(uWS::WebSocket<SSL, isServer> *ws, int code, std::string_view message) override {
             try {
                 auto *data = static_cast<PerUserData *>(ws->getUserData());
+
+                mtx.lock();
+//                std::cout << "Locked onClose" << std::endl;
                 data->app->connectionCount--;
+//                std::cout << "Connections: " << data->app->connectionCount <<  " Capacity: " << data->app->capacity << std::endl;
+                mtx.unlock();
+//                std::cout << "Unlocked onClose" << std::endl;
 
                 channelManager->removeFromAllChannels(ws);
                 RofRof::Logger::debug("Connection closed");
