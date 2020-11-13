@@ -7,13 +7,14 @@
 #include <string>
 #include "../Payload.h"
 #include "IChannel.h"
+#include "../utils/Logger.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct Channel : public RofRof::IChannel<SSL, isServer> {
     public:
         Channel() {
-            std::cout << " Called empty constructor of channel " << std::endl;
+            RofRof::Logger::error("Called empty constructor of channel", std::string());
         }
 
         Channel(std::string channelName) {
@@ -22,6 +23,8 @@ namespace RofRof {
 
         void subscribe(uWS::WebSocket <SSL, isServer> *ws, RofRof::Payload *payload) override {
             this->saveConnection(ws);
+
+            this->connectionCount++;
 
             Json::Value root;
             root["event"] = "pusher_internal:subscription_succeeded";
@@ -37,8 +40,11 @@ namespace RofRof {
             if (it == this->subscribedConnections.end()) {
                 return;
             }
+
             this->subscribedConnections.erase(it);
-            std::cout << "Removed " << data->socketId << " from channel " << this->channelName << std::endl;
+            RofRof::Logger::debug("Removed " , data->socketId , " from channel " , this->channelName);
+
+            this->connectionCount--;
         }
     };
 }

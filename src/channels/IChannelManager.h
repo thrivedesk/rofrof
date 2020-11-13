@@ -18,8 +18,6 @@ namespace RofRof {
 
         virtual std::map<std::string, RofRof::IChannel<SSL, isServer> *> getChannels(std::string appId) = 0;
 
-        virtual unsigned int getConnectionCount(std::string appId) = 0;
-
         virtual void removeFromAllChannels(uWS::WebSocket<SSL, isServer> *ws) = 0;
     };
 }

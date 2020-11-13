@@ -24,7 +24,7 @@ namespace RofRof {
         }
 
         void respond() override {
-            std::cout << "Event received: " << payload->event << std::endl;
+            RofRof::Logger::debug("Event received: " , payload->event);
             if (payload->event.rfind("pusher:ping", 0) == 0) {
                 this->pong();
             } else if (payload->event.rfind("pusher:subscribe", 0) == 0) {
@@ -32,28 +32,28 @@ namespace RofRof {
             } else if (payload->event.rfind("pusher:unsubscribe", 0) == 0) {
                 this->unsubscribe();
             } else {
-                std::cout << "Unsupported event detected: " << payload->event << std::endl;
+                RofRof::Logger::debug("Unsupported event detected: " , payload->event);
             }
         }
 
     protected:
         void pong() {
-            std::cout << "Sending pong" << std::endl;
+            RofRof::Logger::debug("Sending pong");
             this->ws->send(R"({"event":"pusher:pong","data":{}})", uWS::OpCode::TEXT);
         }
 
         void subscribe() {
-            std::cout << "Subscribing" << std::endl;
+            RofRof::Logger::debug("Subscribing");
             auto data = static_cast<RofRof::PerUserData *>(this->ws->getUserData());
-            std::cout << "Finding channel" << std::endl;
+            RofRof::Logger::debug("Finding channel");
             auto channel = channelManager->findOrCreate(data->app->id, payload->message["channel"].asString());
-            std::cout << "Channel found" << std::endl;
+            RofRof::Logger::debug("Channel found");
             channel->subscribe(this->ws, this->payload);
-            std::cout << "Subscribed" << std::endl;
+            RofRof::Logger::debug("Subscribed");
         }
 
         void unsubscribe() {
-            std::cout << "Unsubscribing" << std::endl;
+            RofRof::Logger::debug("Unsubscribing");
             auto data = static_cast<RofRof::PerUserData *>(this->ws->getUserData());
             auto channel = channelManager->findOrCreate(data->app->id, payload->message["channel"].asString());
             channel->unsubscribe(this->ws);

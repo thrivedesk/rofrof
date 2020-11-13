@@ -7,6 +7,7 @@
 
 #include <string>
 #include "IChannel.h"
+#include "../utils/Logger.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -54,7 +55,9 @@ namespace RofRof {
                 return;
             }
             this->subscribedConnections.erase(it);
-            std::cout << "Removed " << data->socketId << " from channel " << this->channelName << std::endl;
+            this->connectionCount--;
+
+            RofRof::Logger::debug("Removed " , data->socketId , " from channel " , this->channelName);
         }
 
     public:
@@ -73,6 +76,8 @@ namespace RofRof {
         void subscribe(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload *payload) override {
             this->verifySignature(ws, payload);
             this->saveConnection(ws);
+
+            this->connectionCount++;
 
             std::string_view channel_str_data = payload->message["channel_data"].asCString();
 

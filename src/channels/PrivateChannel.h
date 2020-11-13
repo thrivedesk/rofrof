@@ -6,6 +6,7 @@
 #define ROFROF_PRIVATECHANNEL_H
 
 #include "IChannel.h"
+#include "../utils/Logger.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -19,6 +20,8 @@ namespace RofRof {
         void subscribe(uWS::WebSocket <SSL, isServer> *ws, RofRof::Payload *payload) override {
             this->verifySignature(ws, payload);
             this->saveConnection(ws);
+
+            this->connectionCount++;
 
             Json::Value root;
             root["event"] = "pusher_internal:subscription_succeeded";
@@ -35,7 +38,8 @@ namespace RofRof {
                 return;
             }
             this->subscribedConnections.erase(it);
-            std::cout << "Removed " << data->socketId << " from channel " << this->channelName << std::endl;
+            this->connectionCount--;
+            RofRof::Logger::debug("Removed " , data->socketId , " from channel " , this->channelName);
         }
     };
 }

@@ -7,6 +7,8 @@
 
 #include <string>
 #include <utility>
+#include "../exceptions/InvalidAppIdException.h"
+#include "../exceptions/InvalidAppSecretException.h"
 
 namespace RofRof {
     struct App {
@@ -18,16 +20,17 @@ namespace RofRof {
         std::string host;
         std::string path;
         unsigned int capacity = 0;
+        unsigned int connectionCount = 0;
         bool clientMessagesEnabled = false;
         bool statisticsEnabled = false;
 
         App(std::string appId, std::string appKey, std::string appSecret) {
             if (std::empty(appKey)) {
-                // TODO: throw error
+                throw RofRof::InvalidAppIdException();
             }
 
             if (std::empty(appSecret)) {
-                // TODO: throw error
+                throw RofRof::InvalidAppSecretException();
             }
 
             this->id = std::move(appId);

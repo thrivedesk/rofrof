@@ -48,10 +48,11 @@ g++ -flto -O3 -Wconversion -std=c++2a -lpthread -pthread -IuWebSockets/src -IuWe
 - [x] HTTP User API 
 - [x] HTTP Trigger API 
 - [x] Signature verification 
-- [ ] Concurrent user limit per app  
+- [x] Concurrent user limit per app  
 - [ ] Hostname check  
 - [ ] Path check  
 - [ ] Thread safe
+- [ ] Cluster support
 - [ ] Webhook support
 - [ ] Write tests
 - [ ] Write benchmark

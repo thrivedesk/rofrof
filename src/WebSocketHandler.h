@@ -83,6 +83,10 @@ namespace RofRof {
                  * HttpRequest (req) is ONLY valid in this very callback, so any data you will need later
                  * has to be COPIED into PerSocketData here. */
                 App *app = ensureValidAppKey(res, req);
+                if (app->connectionCount >= app->capacity) {
+                    res->writeStatus("425 Too Early")->end(R"({"event":"pusher:error", "message":"App capacity exceeded"})");
+                    return;
+                }
 
                 unsigned long long part1 = unique_random10();
                 unsigned long long part2 = unique_random10();
@@ -115,10 +119,12 @@ namespace RofRof {
 
         void onOpen(uWS::WebSocket<SSL, isServer> *ws) override {
             try {
-//                    ->limitConcurrentConnections(ws)
                 auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
+                data->app->connectionCount++;
 
-                std::cout << "New Connection to AppID: " << data->app->id << " With Socket ID: " << data->socketId << std::endl;
+                RofRof::Logger::debug("New Connection to AppID: " , data->app->id , " With Socket ID: " , data->socketId);
+                RofRof::Logger::debug("Total connections: " , std::to_string(data->app->connectionCount));
+
                 Json::Value root;
                 Json::Value rdata;
                 rdata["socket_id"] = data->socketId;
@@ -134,19 +140,19 @@ namespace RofRof {
         }
 
         void onDrain(uWS::WebSocket<SSL, isServer> *ws) {
-            std::cout << "Drain" << std::endl;
+            RofRof::Logger::debug("Drain");
         }
 
         void onMessage(uWS::WebSocket<SSL, isServer> *ws, std::string_view message, uWS::OpCode opCode) override {
             try {
-                std::cout << "Message received: " << message << std::endl;
+                RofRof::Logger::debug("Message received: ", message);
 
                 JSONCPP_STRING err;
                 Json::Value msg;
 
                 const std::unique_ptr<Json::CharReader> reader(rBuilder.newCharReader());
                 if (!reader->parse(message.cbegin(), message.cend(), &msg, &err)) {
-                    std::cout << "error" << std::endl;
+                    RofRof::Logger::error("error parsing message: ", err);
                     return;
                 }
 
@@ -173,8 +179,11 @@ namespace RofRof {
 
         void onClose(uWS::WebSocket<SSL, isServer> *ws, int code, std::string_view message) override {
             try {
+                auto *data = static_cast<PerUserData *>(ws->getUserData());
+                data->app->connectionCount--;
+
                 channelManager->removeFromAllChannels(ws);
-                std::cout << "Connection closed" << std::endl;
+                RofRof::Logger::debug("Connection closed");
             } catch (RofRof::RofRofException &e) {
                 ws->send(e.what(), uWS::OpCode::TEXT);
             }
@@ -182,28 +191,11 @@ namespace RofRof {
 
         void onError(uWS::WebSocket<SSL, isServer> *ws, std::exception exception) override {
             try {
-                std::cout << "Error occurred" << std::endl;
+                RofRof::Logger::error("Error occurred:", std::string());
+                std::cout << exception.what() << std::endl;
             } catch (RofRof::RofRofException &e) {
                 ws->send(e.what(), uWS::OpCode::TEXT);
             }
-        }
-
-    protected:
-        WebSocketHandler *verifyAppKey(uWS::WebSocket<SSL, isServer> *ws) {
-            std::cout << ws->getUserData() << std::endl;
-            return this;
-        }
-
-        WebSocketHandler *limitConcurrentConnections(uWS::WebSocket<SSL, isServer> *ws) {
-            return this;
-        }
-
-        WebSocketHandler *generateSocketId(uWS::WebSocket<SSL, isServer> *ws) {
-            return this;
-        }
-
-        WebSocketHandler *establishConnection(uWS::WebSocket<SSL, isServer> *ws) {
-            return this;
         }
     };
 }

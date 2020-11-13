@@ -8,12 +8,14 @@
 #include "../Payload.h"
 #include "../utils/utils.h"
 #include "../exceptions/SignatureMismatchException.h"
+#include "../utils/Logger.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
     struct IChannel {
     protected:
         std::map<std::string, uWS::WebSocket<SSL, isServer> *> subscribedConnections;
+        unsigned int connectionCount = 0;
 
         void verifySignature(uWS::WebSocket<SSL, isServer> *ws, RofRof::Payload *payload) {
             std::string auth_signature = payload->message["auth"].asString();
@@ -39,7 +41,7 @@ namespace RofRof {
         void saveConnection(uWS::WebSocket<SSL, isServer> *ws) {
             auto data = static_cast<RofRof::PerUserData *>(ws->getUserData());
             this->subscribedConnections[data->socketId] = ws;
-            std::cout << "Added " << data->socketId << " to channel " << this->channelName << std::endl;
+            RofRof::Logger::debug("Added " , data->socketId , " to channel " , this->channelName);
         }
 
     public:
@@ -48,7 +50,7 @@ namespace RofRof {
         virtual ~IChannel() = default;
 
         bool hasConnections() {
-            std::cout << "Calling hasConnections() in " << this->channelName << std::endl;
+            RofRof::Logger::debug("Calling hasConnections() in " , this->channelName);
             return !subscribedConnections.empty();
         }
 

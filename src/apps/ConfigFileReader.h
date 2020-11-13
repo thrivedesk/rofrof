@@ -33,7 +33,7 @@ namespace RofRof {
                     content += line;
                 }
             } else {
-                std::cout << "Could not open config file" << std::endl;
+                RofRof::Logger::error("Could not open config file", std::string());
             }
 
             return content;
@@ -47,7 +47,7 @@ namespace RofRof {
             Json::CharReaderBuilder builder;
             const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
             if (!reader->parse(message.cbegin(), message.cend(), &config, &err)) {
-                std::cout << "error" << std::endl;
+                RofRof::Logger::error("config parsing error: ", err);
                 return config;
             }
 
@@ -55,7 +55,7 @@ namespace RofRof {
         }
 
         std::vector<Json::Value> mapToApps(const Json::Value &config) {
-            int i = 0;
+            unsigned int i = 0;
             while (config.isValidIndex(i)) {
                 auto appConfig = config[i++];
                 apps.push_back(appConfig);

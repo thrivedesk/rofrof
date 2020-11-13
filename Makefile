@@ -15,8 +15,8 @@ build_socket:
 make_dir:
 	mkdir -p build;
 
-debug: build_socket make_dir compile_debug
-build: build_socket make_dir compile_release
+build: build_socket make_dir compile_debug
+release: build_socket make_dir compile_release
 
 clean:
 	rm -rf build;

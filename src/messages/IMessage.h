@@ -10,7 +10,7 @@ namespace RofRof {
     public:
         virtual ~IMessage() = default;
         virtual void respond() {
-            std::cout << "Not implemented method IMessage::respond()" << std::endl;
+            RofRof::Logger::error("Not implemented method IMessage::respond()", std::string());
         };
     };
 }

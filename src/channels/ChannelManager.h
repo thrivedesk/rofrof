@@ -20,17 +20,17 @@ namespace RofRof {
     private:
         RofRof::IChannel<SSL, isServer> *makeChannel(std::string channelName) {
             if (channelName.rfind("private-", 0) == 0) {
-                std::cout << "Making private channel" << std::endl;
+                RofRof::Logger::debug("Making private channel");
                 RofRof::PrivateChannel<SSL, isServer> *channel = new RofRof::PrivateChannel<SSL, isServer>(channelName);
                 return channel;
             }
 
             if (channelName.rfind("presence-", 0) == 0) {
-                std::cout << "Making presence channel" << std::endl;
+                RofRof::Logger::debug("Making presence channel");
                 RofRof::PresenceChannel<SSL, isServer> *channel = new RofRof::PresenceChannel<SSL, isServer>(channelName);
                 return channel;
             }
-            std::cout << "Making generic channel" << std::endl;
+            RofRof::Logger::debug("Making generic channel");
             RofRof::Channel<SSL, isServer> *channel = new RofRof::Channel<SSL, isServer>(channelName);
             return channel;
         }
@@ -40,14 +40,14 @@ namespace RofRof {
 
     public:
         ChannelManager() {
-            std::cout << "New channel manager constructed" << std::endl;
+            RofRof::Logger::debug("New channel manager constructed");
         }
 
         RofRof::IChannel<SSL, isServer> *findOrCreate(std::string appId, std::string channelName) override {
-            std::cout << "looking for app" << std::endl;
+            RofRof::Logger::debug("looking for app");
             auto appsIt = this->apps.find(appId);
             if (appsIt == this->apps.end()) {
-                std::cout << "Could not find app" << std::endl;
+                RofRof::Logger::debug("Could not find app");
                 auto *channel = this->makeChannel(channelName);
                 this->apps[appId][channelName] = channel;
                 return channel;
@@ -55,9 +55,9 @@ namespace RofRof {
 
             auto channels = appsIt->second;
             auto channelsIt = channels.find(channelName);
-            std::cout << "looking for channel" << std::endl;
+            RofRof::Logger::debug("looking for channel");
             if (channelsIt == channels.end()) {
-                std::cout << "Could not find channel" << std::endl;
+                RofRof::Logger::debug("Could not find channel");
                 auto *channel = this->makeChannel(channelName);
                 this->apps[appId][channelName] = channel;
                 return channel;
@@ -92,23 +92,6 @@ namespace RofRof {
             return appsIt->second;
         }
 
-        unsigned int getConnectionCount(std::string appId) override {
-            std::vector<std::string> connections;
-
-            auto channels = this->getChannels(appId);
-            for (auto it = channels.begin(); it != channels.end(); it++) {
-                auto *channel = it->second;
-                std::map<std::string, uWS::WebSocket<SSL, isServer> *> subscriptions = channel->getSubscribedConnections();
-                for (auto it2 = subscriptions.begin(); it2 != subscriptions.end(); it2++) {
-                    connections.push_back(it2->first);
-                }
-            }
-
-            std::sort(connections.begin(), connections.end());
-
-            return (unsigned int) (std::unique(connections.begin(), connections.end()) - connections.begin());
-        }
-
         void removeFromAllChannels(uWS::WebSocket<SSL, isServer> *ws) override {
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
 
@@ -120,13 +103,13 @@ namespace RofRof {
             std::map<std::string, RofRof::IChannel<SSL, isServer> *> app = appIt->second;
             for (auto channelIt = app.begin(); channelIt != app.end(); channelIt++) {
                 RofRof::IChannel<SSL, isServer> *channel = channelIt->second;
-                std::cout << "Unsubscribing from: " << channel->channelName << std::endl;
+                RofRof::Logger::debug("Unsubscribing from: " , channel->channelName);
                 channel->unsubscribe(ws);
             }
             for (auto channelIt = app.cbegin(); channelIt != app.cend();) {
                 RofRof::IChannel<SSL, isServer> *channel = channelIt->second;
                 if (!channel->hasConnections()) {
-                    std::cout << "Erasing channel: " << channel->channelName << std::endl;
+                    RofRof::Logger::debug("Erasing channel: " , channel->channelName);
                     app.erase(channelIt++);
                 } else {
                     ++channelIt;
@@ -136,7 +119,7 @@ namespace RofRof {
             for (auto appIt2 = apps.begin(); appIt2 != apps.end();) {
                 std::map<std::string, RofRof::IChannel<SSL, isServer> *> app2 = appIt2->second;
                 if (app2.size() == 0) {
-                    std::cout << "Erasing app: " << appIt2->first << std::endl;
+                    RofRof::Logger::debug("Erasing app: " , appIt2->first);
                     apps.erase(appIt2++);
                 } else {
                     ++appIt2;

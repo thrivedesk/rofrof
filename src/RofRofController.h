@@ -116,7 +116,7 @@ namespace RofRof {
                         Json::CharReaderBuilder builder;
                         const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
                         if (!reader->parse(message.cbegin(), message.cend(), &payload, &err)) {
-                            std::cout << "error" << std::endl;
+                            RofRof::Logger::error("error parsing payload", err);
                             res->end("Error");
                             return;
                         }

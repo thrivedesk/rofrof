@@ -9,6 +9,7 @@
 #include "IMessage.h"
 #include "../Payload.h"
 #include "../PerUserData.h"
+#include "../utils/Logger.h"
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -30,12 +31,18 @@ namespace RofRof {
             }
 
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
-            std::cout << " Client Message to channel " << payload->channel << std::endl;
+
+            if (!data->app->clientMessagesEnabled) {
+                RofRof::Logger::debug("Client messaging disabled");
+                return;
+            }
+
+            RofRof::Logger::debug("Client Message to channel " , payload->channel);
 
             RofRof::IChannel<SSL, isServer> *channel = channelManager->find(data->app->id, payload->channel);
 
             if (channel == nullptr) {
-                std::cout << "Channel does not exist" << std::endl;
+                RofRof::Logger::debug("Channel does not exist");
                 return;
             }
 
@@ -46,7 +53,7 @@ namespace RofRof {
 
             channel->broadcastToOthers(ws, root);
 
-            std::cout << "Message sent, connection count: " << channelManager->getConnectionCount(data->app->id)<< std::endl;
+            RofRof::Logger::debug("Message sent");
         }
     };
 }

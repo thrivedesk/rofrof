@@ -16,12 +16,12 @@ namespace RofRof {
     struct MessageFactory {
     public:
         RofRof::IMessage* createForMessage(RofRof::Payload *payload, uWS::WebSocket<SSL, isServer> *ws, RofRof::IChannelManager<SSL, isServer> *channelManager) {
-            std::cout << "Event: " << payload->event << std::endl;
+            RofRof::Logger::debug("Event: " , payload->event);
             if (payload->event.rfind("pusher:", 0) == 0) {
-                std::cout << "Protocol message" << std::endl;
+                RofRof::Logger::debug("Protocol message");
                 return new RofRof::ChannelProtocolMessage<SSL, isServer>(payload, ws, channelManager);
             }
-            std::cout << "Client message" << std::endl;
+            RofRof::Logger::debug("Client message");
             return new RofRof::ClientMessage<SSL, isServer>(payload, ws, channelManager);
         }
     };

@@ -6,12 +6,12 @@ config:
       rampTo: 100
       name: "Ramping up the load"
     - duration: 30
-      arrivalRate: 50
+      arrivalRate: 20
       rampTo: 200
       name: "Ramping up the load"
     - duration: 60
-      arrivalRate: 300
-      rampTo: 1000
+      arrivalRate: 50
+      rampTo: 500
       name: "Pushing a constant load"
 scenarios:
   - engine: "ws"
