@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <vector>
 #include <json/json.h>
@@ -27,11 +28,11 @@ namespace RofRof {
             std::string content;
 
             if (inFile.is_open()) {
-                while (!inFile.eof()) {
-                    std::string line;
-                    inFile >> line;
-                    content += line;
-                }
+                // Read the whole file verbatim so that whitespace inside JSON
+                // string values is preserved.
+                std::stringstream ss;
+                ss << inFile.rdbuf();
+                content = ss.str();
             } else {
                 RofRof::Logger::error("Could not open config file", std::string());
             }

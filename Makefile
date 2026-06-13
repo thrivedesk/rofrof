@@ -1,29 +1,30 @@
-override CXXFLAGS += -pthread -lpthread -flto -Wconversion -std=c++2a -IuWebSockets/src -IuWebSockets/uSockets/src -DUWS_WITH_PROXY
-override LDFLAGS += uWebSockets/uSockets/*.o -lz -lssl -lcrypto -luv -ljsoncpp
+# Thin convenience wrapper around the CMake build.
+# Dependencies (uWebSockets, uSockets, jsoncpp) are fetched into ./third_party
+# by CMake; OpenSSL and zlib are located from the system. No apt install needed.
 
-.PHONY: clean build
+BUILD_DIR ?= build
 
-compile_debug:
-	$(CXX) -static-libasan -g -O0 $(CXXFLAGS) src/main.cpp -o build/rofrof $(LDFLAGS);
+.PHONY: all build release run clean rebuild
 
-compile_release:
-	$(CXX) -fsanitize=address -O3 $(CXXFLAGS) src/main.cpp -o build/rofrof $(LDFLAGS);
+all: build
 
-build_socket:
-	WITH_OPENSSL=1 $(MAKE) -C uWebSockets/uSockets;
+build:
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=RelWithDebInfo
+	cmake --build $(BUILD_DIR) -j
 
-make_dir:
-	mkdir -p build;
+release:
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=Release
+	cmake --build $(BUILD_DIR) -j
 
-build: build_socket make_dir compile_debug
-release: build_socket make_dir compile_release
+# Run from the repo root so apps.json (read by relative path) is found.
+run: build
+	./$(BUILD_DIR)/rofrof
 
 clean:
-	rm -rf build;
+	rm -rf $(BUILD_DIR)
 
-all: clean build
+# Remove build output and all fetched dependencies.
+distclean:
+	rm -rf $(BUILD_DIR) third_party
 
-run:
-	clean
-	build
-	build/rofrof
+rebuild: clean build

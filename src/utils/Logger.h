@@ -16,13 +16,14 @@ namespace RofRof {
 
         template<typename... Args>
         static void error(Args... args) {
-            (std::cout << ... << args) << std::endl;
+            (std::cerr << ... << args) << std::endl;
         }
 
         template<typename... Args>
-        static void debug(Args... args) {
-            return;
-            (std::cout << ... << args) << std::endl;
+        static void debug(Args...) {
+            // Debug logging is compiled out for performance.
+            // To enable, replace this body with:
+            //   (std::cout << ... << args) << std::endl;
         }
     };
 }

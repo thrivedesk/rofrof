@@ -1,65 +1,75 @@
 # RofRof
 
+A Pusher-protocol WebSocket server — public / private / presence channels,
+client events, and the HTTP push + channel-info API — built on
+[uWebSockets](https://github.com/uNetworking/uWebSockets).
 
 ### Development
 
-Standard: C++2a
+Standard: C++20
 
 ### Dependencies
-* uNetWorking/uWebSockets#v18.15.0
-* libjsoncpp-dev
-* libabsl
-    * http://archive.ubuntu.com/ubuntu/pool/universe/a/abseil/libabsl20200225_0~20200225.2-3_amd64.deb
-    * http://archive.ubuntu.com/ubuntu/pool/universe/a/abseil/libabsl-dev_0~20200225.2-3_amd64.deb
-* libssl-dev
-* libboost1.71-dev
-* zlib1g-dev
-* libuv1-dev
 
-### Prepare
+Project dependencies are fetched into a gitignored `third_party/` directory by
+CMake's `FetchContent`, so no system `-dev` packages are required:
 
-```bash
-git submodule update --init --recursive
-```
+* uWebSockets `v18.15.0`
+* uSockets `7dea1e0` (built with the epoll backend + OpenSSL)
+* jsoncpp `1.9.5`
+
+Located from the system (present on any normal toolchain):
+
+* OpenSSL (`libssl` / `libcrypto`)
+* zlib
 
 ### Build
 
-```bash
-make build
-or
-make
+Requires `cmake` (>= 3.16) and a C++20 compiler.
 
-g++ -flto -O3 -Wconversion -std=c++2a -lpthread -pthread -IuWebSockets/src -IuWebSockets/uSockets/src src/main.cpp -o main uWebSockets/uSockets/*.o -lz -lssl -lcrypto -luv -ljsoncpp && ./main
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
+
+or via the Makefile wrapper:
+
+```bash
+make          # RelWithDebInfo build
+make release  # optimized build
 ```
 
 ### Run
-```
-./build/rofrof
+
+```bash
+./build/rofrof      # run from the repo root so apps.json is found
+# or
+make run
 ```
 
-### Progress
+The server listens on port `7000` and reads its app definitions from
+`apps.json` in the working directory.
+
+### Threading
+
+The server runs on a single uWebSockets event loop that owns all connection and
+channel state. Each connection is pinned to the loop that accepted it, so
+channel fan-out and HTTP-triggered broadcasts all execute on the same loop.
+
+### Features
 
 - [x] App support
-- [x] Client message 
-- [x] Private Channel 
-- [x] Presence Channel 
-- [x] HTTP Channels API 
-- [x] HTTP Channel API 
-- [x] HTTP User API 
-- [x] HTTP Trigger API 
-- [x] Signature verification 
-- [x] Concurrent user limit per app  
-- [ ] Hostname check  
-- [ ] Path check  
-- [x] Thread safe
-- [x] Multithreading
+- [x] Client messages
+- [x] Private channels
+- [x] Presence channels
+- [x] HTTP Channels API
+- [x] HTTP Channel API
+- [x] HTTP Users API
+- [x] HTTP Trigger API
+- [x] Signature verification (constant-time)
+- [x] Per-app connection limit
+- [ ] Hostname check
+- [ ] Path check
 - [ ] Cluster support
 - [ ] Webhook support
-- [ ] Write tests
-- [ ] Write benchmark
-- [ ] Optimize code
-- [ ] Optimize memory and computation
-
-### TODO:
-- [ ] Random number generator has bug
-- [ ] There's a memory leak somewhere in channel construction
+- [ ] Tests
+- [ ] Benchmarks

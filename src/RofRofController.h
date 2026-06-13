@@ -6,10 +6,11 @@
 #define ROFROF_ROFROFCONTROLLER_H
 
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 #include "exceptions/SignatureMismatchException.h"
 #include "exceptions/InvalidAppIdException.h"
 #include "utils/utils.h"
-#include <boost/algorithm/string.hpp>
 
 namespace RofRof {
     template<bool SSL, bool isServer>
@@ -37,12 +38,17 @@ namespace RofRof {
             throw RofRof::InvalidAppIdException();
         }
 
-        std::map<std::string, std::string> ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
+        // Core verifier operating purely on copied strings. uWS::HttpRequest is
+        // only valid during the synchronous portion of a handler, so the async
+        // POST path must copy these values out of req before calling this.
+        std::map<std::string, std::string> verifySignature(const std::string &method, const std::string &url,
+                                                            const std::string &queryString,
+                                                            const std::string &authSignature,
+                                                            App *app, const std::string &content) {
             // ordered map
             std::map<std::string, std::string> reqs;
 
             // map the query string into params map
-            std::string queryString = std::string(req->getQuery());
             std::vector<std::string> reqPairs = RofRof::Strings::explode(queryString, '&');
             for (const std::string &qPairStr: reqPairs) {
                 std::vector<std::string> qPair = RofRof::Strings::explode(qPairStr, '=');
@@ -64,23 +70,33 @@ namespace RofRof {
                 reqs["body_md5"] = RofRof::Strings::md5(content);
             }
 
+            std::string upperMethod = method;
+            std::transform(upperMethod.begin(), upperMethod.end(), upperMethod.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
             // join as string
             std::string signature;
-
-            signature += std::string(req->getMethod());
-            boost::to_upper(signature);
+            signature += upperMethod;
             signature += "\n";
-            signature += std::string(req->getUrl());
+            signature += url;
             signature += "\n";
             signature += RofRof::Strings::implode_map('=', '&', reqs);
-            std::string calculated_signature = RofRof::Strings::hmac_sha256(app->secret, signature);
-            std::string expected_signature = std::string(req->getQuery("auth_signature"));
 
-            if (calculated_signature != expected_signature) {
+            std::string calculated_signature = RofRof::Strings::hmac_sha256(app->secret, signature);
+
+            if (!RofRof::Strings::constant_time_equals(calculated_signature, authSignature)) {
                 throw RofRof::SignatureMismatchException();
             }
 
-            return std::move(reqs);
+            return reqs;
+        }
+
+        // Convenience wrapper for synchronous handlers, where reading from req
+        // is still safe.
+        std::map<std::string, std::string> ensureValidAppSignature(uWS::HttpRequest *req, App *app, const std::string &content) {
+            return verifySignature(std::string(req->getMethod()), std::string(req->getUrl()),
+                                   std::string(req->getQuery()), std::string(req->getQuery("auth_signature")),
+                                   app, content);
         }
 
     public:
@@ -92,17 +108,24 @@ namespace RofRof {
             try {
                 App *app = this->ensureValidAppId(res, req);
 
+                /* req is ONLY valid during this synchronous callback. The onData
+                 * handler below fires later, so copy everything it needs now. */
+                std::string method = std::string(req->getMethod());
+                std::string url = std::string(req->getUrl());
+                std::string query = std::string(req->getQuery());
+                std::string authSignature = std::string(req->getQuery("auth_signature"));
+
                 /* Allocate automatic, stack, variable as usual */
                 std::string buffer;
                 /* Move it to storage of lambda */
-                res->onData([res, req, this, app, buffer = std::move(buffer)](std::string_view data, bool last) mutable {
+                res->onData([res, this, app, method, url, query, authSignature, buffer = std::move(buffer)](std::string_view data, bool last) mutable {
                     /* Mutate the captured data */
                     buffer.append(data.data(), data.length());
 
                     if (last) {
                         /* When this socket dies (times out) it will RAII release everything */
                         try {
-                            ensureValidAppSignature(req, app, buffer);
+                            verifySignature(method, url, query, authSignature, app, buffer);
                         }
                         catch (RofRof::RofRofException &e) {
                             res->writeStatus(e.status)->end(e.what());

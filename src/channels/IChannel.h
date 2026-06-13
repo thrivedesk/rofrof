@@ -33,7 +33,7 @@ namespace RofRof {
 
             std::string calculated_signature = RofRof::Strings::hmac_sha256(data->app->secret, signature_str);
 
-            if (calculated_signature != expected_signature) {
+            if (!RofRof::Strings::constant_time_equals(calculated_signature, expected_signature)) {
                 throw RofRof::SignatureMismatchException();
             }
         }

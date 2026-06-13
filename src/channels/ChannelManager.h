@@ -45,6 +45,16 @@ namespace RofRof {
             RofRof::Logger::debug("New channel manager constructed");
         }
 
+        ~ChannelManager() override {
+            // Channels are heap-allocated in makeChannel(); free any that are
+            // still around at shutdown.
+            for (auto &appPair : apps) {
+                for (auto &channelPair : appPair.second) {
+                    delete channelPair.second;
+                }
+            }
+        }
+
         RofRof::IChannel<SSL, isServer> *findOrCreate(std::string appId, std::string channelName) override {
             RofRof::Logger::debug("looking for app");
             auto appsIt = this->apps.find(appId);
@@ -97,37 +107,33 @@ namespace RofRof {
         void removeFromAllChannels(uWS::WebSocket<SSL, isServer> *ws) override {
             auto *data = static_cast<RofRof::PerUserData *>(ws->getUserData());
 
+            std::lock_guard<std::mutex> guard(mtx);
+
             auto appIt = apps.find(data->app->id);
             if (appIt == apps.end()) {
                 return;
             }
 
-            mtx.lock();
-//            std::cout << "Locked channel manager" << std::endl;
-            std::map<std::string, RofRof::IChannel<SSL, isServer> *> channels = appIt->second;
+            // Bind by reference so erase() prunes the real map, and free each
+            // channel once it loses its last subscriber.
+            auto &channels = appIt->second;
             for (auto channelIt = channels.begin(); channelIt != channels.end();) {
                 RofRof::IChannel<SSL, isServer> *channel = channelIt->second;
                 RofRof::Logger::debug("Unsubscribing from: ", channel->channelName);
                 channel->unsubscribe(ws);
                 if (!channel->hasConnections()) {
                     RofRof::Logger::debug("Erasing channel: ", channel->channelName);
-                    channels.erase(channelIt++);
+                    delete channel;
+                    channelIt = channels.erase(channelIt);
                 } else {
                     ++channelIt;
                 }
             }
 
-            for (auto appIt2 = apps.begin(); appIt2 != apps.end();) {
-                std::map<std::string, RofRof::IChannel<SSL, isServer> *> app2 = appIt2->second;
-                if (app2.size() == 0) {
-                    RofRof::Logger::debug("Erasing app: ", appIt2->first);
-                    apps.erase(appIt2++);
-                } else {
-                    ++appIt2;
-                }
+            if (channels.empty()) {
+                RofRof::Logger::debug("Erasing app: ", appIt->first);
+                apps.erase(appIt);
             }
-            mtx.unlock();
-            std::cout << "Unlocked channel manager" << std::endl;
         }
     };
 }

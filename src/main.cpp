@@ -1,4 +1,3 @@
-#include <thread>
 #include <csignal>
 #include <iostream>
 #include "App.h"
@@ -36,70 +35,66 @@ int main() {
     auto *configReader = new RofRof::ConfigFileReader<SSL, isServer>();
     configReader->read("apps.json")->make(websocketHandler->appManager);
 
-    std::vector<std::thread *> threads(std::thread::hardware_concurrency());
+    /* A single uWebSockets event loop owns all connection and channel state.
+     * Each connection is pinned to the loop that accepted it, so channel
+     * fan-out and HTTP-triggered broadcasts all run on this loop and may touch
+     * the shared channel/app maps directly. */
+    uWS::App()
+            .get("/*", [](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                res->end("The fastest WebSocket server in the world!!!");
+            })
+            .post("/apps/:appId/events", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->triggerEvent(res, req);
+            })
+            .get("/apps/:appId/channels", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->fetchChannels(res, req);
+            })
+            .get("/apps/:appId/channels/:channelName", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->fetchChannel(res, req);
+            })
+            .get("/apps/:appId/channels/:channelName/users", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
+                controller->fetchUsers(res, req);
+            })
+            .ws<RofRof::PerUserData>("/app/:appId", {
+                    /* Settings */
+                    .compression = uWS::SHARED_COMPRESSOR,
+                    .maxPayloadLength = 16 * 1024,
+                    .idleTimeout = 35,
+                    .maxBackpressure = 1 * 1024 * 1024,
+                    /* Handlers */
+                    .upgrade = [&](auto *res, auto *req, auto *context) {
+                        websocketHandler->onUpgrade(res, req, context);
+                    },
+                    .open = [&](auto *ws) {
+                        websocketHandler->onOpen(ws);
+                    },
+                    .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
+                        websocketHandler->onMessage(ws, message, opCode);
+                    },
+                    .drain = [&](auto *ws) {
+                        /* Check getBufferedAmount here */
+                        websocketHandler->onDrain(ws);
+                    },
+                    .ping = [](auto *ws) {
 
-    std::transform(threads.begin(), threads.end(), threads.begin(), [&](std::thread *t) {
-        return new std::thread([&]() {
-            uWS::App()
-                    .get("/*", [](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                        res->end("The fastest WebSocket server in the world!!!");
-                    })
-                    .post("/apps/:appId/events", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                        controller->triggerEvent(res, req);
-                    })
-                    .get("/apps/:appId/channels", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                        controller->fetchChannels(res, req);
-                    })
-                    .get("/apps/:appId/channels/:channelName", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                        controller->fetchChannel(res, req);
-                    })
-                    .get("/apps/:appId/channels/:channelName/users", [&](uWS::HttpResponse<SSL> *res, uWS::HttpRequest *req) {
-                        controller->fetchUsers(res, req);
-                    })
-                    .ws<RofRof::PerUserData>("/app/:appId", {
-                            /* Settings */
-                            .compression = uWS::SHARED_COMPRESSOR,
-                            .maxPayloadLength = 16 * 1024,
-                            .idleTimeout = 35,
-                            .maxBackpressure = 1 * 1024 * 1024,
-                            /* Handlers */
-                            .upgrade = [&](auto *res, auto *req, auto *context) {
-                                websocketHandler->onUpgrade(res, req, context);
-                            },
-                            .open = [&](auto *ws) {
-                                websocketHandler->onOpen(ws);
-                            },
-                            .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                                websocketHandler->onMessage(ws, message, opCode);
-                            },
-                            .drain = [&](auto *ws) {
-                                /* Check getBufferedAmount here */
-                                websocketHandler->onDrain(ws);
-                            },
-                            .ping = [](auto *ws) {
+                    },
+                    .pong = [](auto *ws) {
 
-                            },
-                            .pong = [](auto *ws) {
+                    },
+                    .close = [&](auto *ws, int code, std::string_view message) {
+                        websocketHandler->onClose(ws, code, message);
+                    }
+            })
+            .listen(7000, [](auto *token) {
+                if (token) {
+                    sockets.push_back(token);
+                    std::cout << "Listening on port " << 7000 << std::endl;
+                } else {
+                    std::cout << "Failed to listen on port 7000" << std::endl;
+                }
+            }).run();
 
-                            },
-                            .close = [&](auto *ws, int code, std::string_view message) {
-                                websocketHandler->onClose(ws, code, message);
-                            }
-                    })
-                    .listen(7000, [](auto *token) {
-                        if (token) {
-                            sockets.push_back(token);
-                            std::cout << "Thread " << std::this_thread::get_id() << " listening on port " << 7000 << std::endl;
-                        } else {
-                            std::cout << "Thread " << std::this_thread::get_id() << " failed to listen on port 7000" << std::endl;
-                        }
-                    }).run();
-        });
-    });
-
-    std::for_each(threads.begin(), threads.end(), [](std::thread *t) {
-        t->join();
-    });
+    std::cout << "Shut down." << std::endl;
 
     delete websocketHandler;
     delete controller;

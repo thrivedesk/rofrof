@@ -48,7 +48,10 @@ namespace RofRof {
                 str += separator;
             }
 
-            str.pop_back();
+            // Drop the trailing separator (pop_back on an empty string is UB).
+            if (!str.empty()) {
+                str.pop_back();
+            }
 
             return str;
         }
@@ -64,6 +67,19 @@ namespace RofRof {
             HMAC_CTX_free(ctx);
 
             return char_array_to_string(hash, len);
+        }
+
+        // Compares two equal-purpose strings (e.g. HMAC signatures) without
+        // leaking how many leading bytes matched via timing.
+        static bool constant_time_equals(const std::string &a, const std::string &b) {
+            if (a.size() != b.size()) {
+                return false;
+            }
+            unsigned char diff = 0;
+            for (std::size_t i = 0; i < a.size(); i++) {
+                diff |= static_cast<unsigned char>(a[i] ^ b[i]);
+            }
+            return diff == 0;
         }
 
         static std::string md5(const std::string &content) {

@@ -7,6 +7,7 @@
 
 #include <sstream>
 #include <random>
+#include <memory>
 #include <unordered_set>
 #include <json/json.h>
 #include "channels/IChannelManager.h"
@@ -18,23 +19,15 @@
 #include "exceptions/RofRofException.h"
 #include "exceptions/InvalidAppKeyException.h"
 
-unsigned long long random10() {
-    static std::string digits = "0123456789";
-    static std::mt19937 rng(std::random_device{}());
-
-    std::shuffle(digits.begin(), digits.end(), rng);
-    return std::stoull(digits);
-}
-
-unsigned long long unique_random10() {
-    static const std::size_t MAX_NUMBERS = 1'000'000; // adjust as required
-    static std::unordered_set<unsigned long long> history;
-
-    if (history.size() == MAX_NUMBERS) throw std::domain_error("limit exceeded");
-
-    while (true) {
-        unsigned long long n = random10();
-        if (history.insert(n).second) return n;
+namespace {
+    // Build a Pusher-style socket id: two independent random integers joined
+    // by a dot, e.g. "5249687391.3872378674".
+    std::string generateSocketId() {
+        static thread_local std::mt19937_64 rng(std::random_device{}());
+        std::uniform_int_distribution<unsigned long long> dist(1ULL, 9'999'999'999ULL);
+        unsigned long long part1 = dist(rng);
+        unsigned long long part2 = dist(rng);
+        return std::to_string(part1) + "." + std::to_string(part2);
     }
 }
 
@@ -51,9 +44,6 @@ namespace RofRof {
 
     public:
         WebSocketHandler() {
-            unsigned int n = 99999999;
-            srand(n);
-
             this->appManager = new RofRof::AppManager<SSL, isServer>();
             this->channelManager = new RofRof::ChannelManager<SSL, isServer>();
             this->messageFactory = new RofRof::MessageFactory<SSL, isServer>();
@@ -97,13 +87,7 @@ namespace RofRof {
                 mtx.unlock();
 //                std::cout << "Unlocked upgrade" << std::endl;
 
-                unsigned long long part1 = unique_random10();
-                unsigned long long part2 = unique_random10();
-
-                char buffer[25];
-                std::sprintf(buffer, "%llu.%llu", part1, part2);
-
-                std::string socketId = (std::string) buffer;
+                std::string socketId = generateSocketId();
 
                 /* Immediately upgrading without doing anything "async" before, is simple */
                 res->template upgrade<RofRof::PerUserData>({
@@ -171,12 +155,13 @@ namespace RofRof {
                     return;
                 }
 
-                auto *payload = new Payload(msg);
+                // Own these via unique_ptr so the Payload and message are freed
+                // even if respond() throws (e.g. on a signature mismatch).
+                auto payload = std::make_unique<Payload>(msg);
 
-                auto *iMessage = messageFactory->createForMessage(payload, ws, channelManager);
+                std::unique_ptr<RofRof::IMessage> iMessage(
+                        messageFactory->createForMessage(payload.get(), ws, channelManager));
                 iMessage->respond();
-                delete iMessage;
-                delete payload;
             } catch (RofRof::RofRofException &e) {
                 std::string response;
                 Json::Value root;
